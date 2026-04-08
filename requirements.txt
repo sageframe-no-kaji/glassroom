@@ -1,0 +1,5 @@
+playwright>=1.40.0
+InquirerPy>=0.3.4
+requests>=2.31.0
+python-dotenv>=1.0.0
+ruff>=0.3.0

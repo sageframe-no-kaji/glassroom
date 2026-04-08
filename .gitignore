@@ -1,0 +1,12 @@
+.env
+.classroom-session/
+prompts/
+logs/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.ruff_cache/
+config.json
+.claude/
+src/dump-*.json
