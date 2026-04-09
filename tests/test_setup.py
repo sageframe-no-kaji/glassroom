@@ -292,3 +292,60 @@ class TestClassesSave:
             content_type="application/json",
         )
         assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# POST /api/reset
+# ---------------------------------------------------------------------------
+
+
+class TestReset:
+    def test_reset_returns_ok(self, client):
+        resp = client.post("/api/reset")
+        assert resp.status_code == 200
+        assert resp.get_json()["ok"] is True
+
+    def test_reset_clears_selected_classes(self, client, engine):
+        _add_selected_class(engine)
+        client.post("/api/reset")
+        with get_session(engine) as s:
+            assert s.query(SelectedClass).count() == 0
+
+    def test_reset_clears_scrape_state(self, client):
+        import src.routes.api as api_mod
+
+        with api_mod._scrape_lock:
+            api_mod._scrape_state["running"] = True
+            api_mod._scrape_state["progress"] = {"status": "done"}
+
+        client.post("/api/reset")
+
+        with api_mod._scrape_lock:
+            assert api_mod._scrape_state["running"] is False
+            assert api_mod._scrape_state["progress"] is None
+
+    def test_reset_clears_login_state(self, client):
+        import src.routes.api as api_mod
+
+        with api_mod._login_lock:
+            api_mod._login_state["status"] = "done"
+            api_mod._login_state["classes"] = [{"name": "Math", "course_url": "x"}]
+
+        client.post("/api/reset")
+
+        with api_mod._login_lock:
+            assert api_mod._login_state["status"] == "idle"
+            assert api_mod._login_state["classes"] == []
+
+    def test_reset_removes_downloads_dir(self, client, tmp_path):
+        from unittest.mock import patch
+
+        dl_dir = tmp_path / "downloads"
+        dl_dir.mkdir()
+        (dl_dir / "somefile.pdf").write_text("data")
+
+        with patch("src.downloader.DOWNLOADS_DIR", dl_dir):
+            resp = client.post("/api/reset")
+
+        assert resp.status_code == 200
+        assert not dl_dir.exists()

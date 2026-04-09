@@ -20,10 +20,10 @@
   <button id="btn-login" class="btn btn-primary" onclick="startLogin()">Open browser &amp; log in</button>
 </div>
 
-<!-- Step 2: Select classes + download option -->
+<!-- Step 2: Select classes -->
 <div id="step-2" class="setup-card" style="display:none">
-  <h2>Step 2 — Select classes to track</h2>
-  <p>Choose which classes to follow. You can change this later under Setup.</p>
+  <h2 id="step-2-heading">Step 2 — Select classes to track</h2>
+  <p id="step-2-desc">Choose which classes to follow. You can change this later under Setup.</p>
 
   <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
     <button class="btn btn-secondary btn-sm" onclick="selectAll()">Select all</button>
@@ -39,10 +39,8 @@
 <!-- Step 3: Scrape -->
 <div id="step-3" class="setup-card" style="display:none">
   <h2>Step 3 — Scrape assignments</h2>
-  {% if has_classes %}
-  <p>Tracking: {{ class_names | join(', ') }}.</p>
-  {% endif %}
   <p>Runs in the background — no browser window needed.</p>
+  <p style="margin-bottom:0.5rem"><button class="btn btn-danger btn-sm" onclick="confirmReset()" style="font-size:0.8rem">Reset &amp; start over</button></p>
 
   <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;font-size:0.9rem;cursor:pointer">
     <input type="checkbox" id="chk-download" checked>
@@ -81,6 +79,8 @@
   progress::-webkit-progress-bar { background:#e5e7eb; border-radius:4px; }
   progress::-webkit-progress-value { background:#2563eb; border-radius:4px; transition:width 0.3s; }
   progress::-moz-progress-bar { background:#2563eb; border-radius:4px; }
+  .btn-danger { background:#dc2626; color:#fff; border-color:#dc2626; }
+  .btn-danger:hover { background:#b91c1c; border-color:#b91c1c; }
 </style>
 
 <script>
@@ -136,23 +136,31 @@
   // -----------------------------------------------------------------------
   // Step 2 — Class selector
   // -----------------------------------------------------------------------
-  function showStep2(classes) {
-    document.getElementById('step-2').style.display = 'block';
-    setDotActive(2);
-
-    const list = document.getElementById('class-list');
-    if (!classes || classes.length === 0) {
-      list.innerHTML = '<p style="color:#dc2626">No classes found. Make sure you are logged in and have classes in Google Classroom.</p>';
+  function renderClassList(classes, selectedNames) {
+    // selectedNames: Set of names to pre-check, or null for all unchecked
+    window._discoveredClasses = classes;
+    const container = document.getElementById('class-list');
+    container.innerHTML = '';
+    if (classes.length === 0) {
+      container.innerHTML = '<p style="color:#9ca3af;font-size:0.9rem">No classes found.</p>';
       return;
     }
-    list.innerHTML = classes.map((c, i) =>
-      `<div class="class-option">
-        <input type="checkbox" id="cls-${i}" value="${i}" checked>
-        <label for="cls-${i}">${escHtml(c.name)}</label>
-      </div>`
-    ).join('');
-    window._discoveredClasses = classes;
+    classes.forEach((cls, i) => {
+      const checked = selectedNames ? selectedNames.has(cls.name) : false;
+      const div = document.createElement('div');
+      div.className = 'class-option';
+      div.innerHTML =
+        '<input type="checkbox" id="cls-' + i + '" ' + (checked ? 'checked' : '') + '>' +
+        '<label for="cls-' + i + '">' + escHtml(cls.name) + '</label>';
+      container.appendChild(div);
+    });
+  }
+
+  function showStep2(classes) {
+    setDotActive(2);
+    renderClassList(classes, null);
     document.getElementById('btn-save-classes').disabled = false;
+    document.getElementById('step-2').style.display = 'block';
   }
 
   function selectAll() {
@@ -322,45 +330,38 @@
   }
 
   // -----------------------------------------------------------------------
-  // Page load — skip to step 3 if already configured
+  // Reset
+  // -----------------------------------------------------------------------
+  function confirmReset() {
+    if (!confirm('This will delete all assignments, scrape history, and class selections. PDF downloads will also be removed.\n\nAre you sure?')) return;
+    fetch('/api/reset', { method: 'POST' })
+      .then(r => r.json())
+      .then(() => { window.location.reload(); })
+      .catch(err => alert('Reset failed: ' + err));
+  }
+
+  // -----------------------------------------------------------------------
+  // Page load — pre-populate if already configured, else start fresh
   // -----------------------------------------------------------------------
   window.addEventListener('DOMContentLoaded', function() {
     const hasClasses = {{ has_classes | tojson }};
-    if (hasClasses) {
-      completeStep(1);
-      completeStep(2);
-      document.getElementById('step-1').style.display = 'none';
-      document.getElementById('step-2').style.display = 'none';
-      document.getElementById('step-3').style.display = 'block';
-      setDotActive(3);
+    const selectedClasses = {{ selected_classes | tojson }};
+    const availableClasses = {{ available_classes | tojson }};
 
-      // Check if a scrape is already running and pick it up
-      fetch('/api/scrape/status')
-        .then(r => r.json())
-        .then(data => {
-          const p = data.progress || {};
-          if (data.running) {
-            const autoDownload = {{ has_classes | tojson }};  // doesn't matter, not re-triggering
-            document.getElementById('scrape-progress-wrap').style.display = 'block';
-            document.getElementById('btn-scrape').style.display = 'none';
-            document.getElementById('scrape-msg').innerHTML = '<span class="spinner"></span> Scrape already running…';
-            pollScrape(false);
-          } else if (p.status === 'done') {
-            updateProgressBar(1, 1, 'Complete');
-            document.getElementById('scrape-progress-wrap').style.display = 'block';
-            const msg = document.getElementById('scrape-msg');
-            msg.style.color = '#166534';
-            msg.textContent = `Last scrape done \u2014 ${p.inserted || 0} new, ${p.updated || 0} updated, ${p.skipped || 0} unchanged.`;
-            document.getElementById('btn-scrape').textContent = 'Re-scrape';
-            completeStep(3);
-            document.getElementById('step-4').style.display = 'block';
-            setDotActive(4);
-            completeStep(4);
-            document.getElementById('done-msg').textContent = 'Data is up to date. Go to the dashboard to see assignments.';
-          }
-          // If idle/null, just show the button — user can click to start
-        })
-        .catch(() => {});
+    if (hasClasses) {
+      // Show step 2 pre-populated so user can adjust before re-scraping
+      completeStep(1);
+      document.getElementById('step-1').style.display = 'none';
+      document.getElementById('step-2').style.display = 'block';
+      setDotActive(2);
+      document.getElementById('step-2-heading').textContent = 'Step 2 — Update class selection';
+      document.getElementById('step-2-desc').textContent = 'Your current classes are pre-selected. Adjust and save to continue.';
+      const selectedNames = new Set(selectedClasses.map(c => c.name));
+      renderClassList(
+        availableClasses.length > 0 ? availableClasses : selectedClasses,
+        selectedNames
+      );
+      document.getElementById('btn-save-classes').disabled = false;
     }
   });
 </script>

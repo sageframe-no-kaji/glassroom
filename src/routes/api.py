@@ -383,6 +383,47 @@ def save_classes() -> Response:
 
 
 # ---------------------------------------------------------------------------
+# POST /api/reset — wipe all student data and return to setup state
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/reset", methods=["POST"])
+def reset_data() -> Response:
+    """Delete all assignments, scrape logs, and selected classes.
+
+    Clears the in-process scrape/login state too so the UI is clean.
+    Does NOT delete the Playwright session (user stays logged in to Google).
+    """
+    import shutil
+
+    engine = current_app.config["DB_ENGINE"]
+
+    with get_session(engine) as session:
+        session.query(Assignment).delete()
+        session.query(ScrapeLog).delete()
+        session.query(SelectedClass).delete()
+
+    # Clear in-process state
+    with _scrape_lock:
+        _scrape_state["running"] = False
+        _scrape_state["progress"] = None
+        _scrape_state["auto_download"] = False
+
+    with _login_lock:
+        _login_state["status"] = "idle"
+        _login_state["classes"] = []
+        _login_state["error"] = None
+
+    # Remove downloaded PDFs if present
+    from src.downloader import DOWNLOADS_DIR as _DOWNLOADS_DIR
+
+    if _DOWNLOADS_DIR.exists():
+        shutil.rmtree(_DOWNLOADS_DIR, ignore_errors=True)
+
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
