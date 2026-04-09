@@ -149,9 +149,14 @@ def init_db(engine: Engine | None = None) -> Engine:
 
 @contextmanager
 def get_session(engine: Engine | None = None) -> Generator[Session, None, None]:
-    """Context manager that yields a SQLAlchemy session and commits on exit."""
+    """Context manager that yields a SQLAlchemy session and commits on exit.
+
+    expire_on_commit=False keeps instance attributes accessible after the
+    session closes — required for callers that read attributes outside the
+    context block.
+    """
     eng = engine if engine is not None else get_engine()
-    factory = sessionmaker(bind=eng)
+    factory = sessionmaker(bind=eng, expire_on_commit=False)
     session: Session = factory()
     try:
         yield session
