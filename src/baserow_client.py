@@ -2,7 +2,7 @@ import re
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import requests
 from dotenv import dotenv_values, set_key
@@ -246,9 +246,8 @@ class BaserowClient:
             print(f"Could not reach Baserow at {BASE_URL}: {exc}")
             sys.exit(1)
 
-        token = resp.json()["token"]
+        token: str = resp.json()["token"]
         set_key(str(ENV_PATH), "BASEROW_TOKEN", token)
-        password = None  # noqa: F841 — clear from local scope
         return token
 
     def _get_token(self) -> str:
@@ -461,7 +460,7 @@ class BaserowClient:
         field_data: dict[str, Any],
         table_id: int,
         field_ids: dict[str, int],
-    ) -> str:
+    ) -> Literal["inserted", "updated", "skipped"]:
         """Insert or update a row keyed on assignment_url.
 
         field_data should contain all scraper fields EXCEPT first_seen_at,

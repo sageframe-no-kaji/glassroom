@@ -70,9 +70,6 @@ _SCRAPER_FIELDS = frozenset(
     }
 )
 
-_SessionFactory: sessionmaker[Session] | None = None
-
-
 def _parse_date_string(s: str | None) -> str | None:
     """Convert a Google Classroom display date string to ISO YYYY-MM-DD.
 
@@ -153,11 +150,9 @@ def init_db(engine: Engine | None = None) -> Engine:
 @contextmanager
 def get_session(engine: Engine | None = None) -> Generator[Session, None, None]:
     """Context manager that yields a SQLAlchemy session and commits on exit."""
-    global _SessionFactory
     eng = engine if engine is not None else get_engine()
-    if _SessionFactory is None or _SessionFactory.kw.get("bind") is not eng:  # type: ignore[attr-defined]
-        _SessionFactory = sessionmaker(bind=eng)
-    session: Session = _SessionFactory()
+    factory = sessionmaker(bind=eng)
+    session: Session = factory()
     try:
         yield session
         session.commit()
@@ -212,6 +207,6 @@ def upsert(
         for field_name in _SCRAPER_FIELDS - {"scraped_at", "last_modified_at"}:
             if field_name in field_data and hasattr(existing, field_name):
                 setattr(existing, field_name, field_data[field_name])
-        existing.scraped_at = now
-        existing.last_modified_at = now
+        existing.scraped_at = now  # type: ignore[assignment]
+        existing.last_modified_at = now  # type: ignore[assignment]
         return "updated"

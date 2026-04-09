@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from dotenv import load_dotenv
 
@@ -12,7 +12,7 @@ def load_config() -> dict[str, Any]:
     if not CONFIG_PATH.exists():
         return _default_config()
     with CONFIG_PATH.open() as f:
-        return json.load(f)
+        return cast(dict[str, Any], json.load(f))
 
 
 def save_config(config: dict[str, Any]) -> None:

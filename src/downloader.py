@@ -136,7 +136,8 @@ def _load_manifest(downloads_dir: Path) -> dict[str, Any]:
     manifest_path = downloads_dir / "manifest.json"
     if manifest_path.exists():
         try:
-            return json.loads(manifest_path.read_text(encoding="utf-8"))
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
         except Exception:
             return {}
     return {}
@@ -206,7 +207,7 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
         if not links_raw.strip():
             continue
 
-        class_name = row.get("class_name") or ""
+        class_name = str(row.get("class_name") or "")
         class_slug = _class_folder_slug(class_name) if class_name else "unknown"
 
         if class_slug not in plan:

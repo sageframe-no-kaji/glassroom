@@ -28,7 +28,10 @@ _ITEM_TYPE_MATERIAL = "5"
 def _open_context(p: Any, headless: bool = False) -> BrowserContext:
     """Launch a persistent Chromium context backed by ~/.classroom-session."""
     SESSION_DIR.mkdir(parents=True, exist_ok=True)
-    return p.chromium.launch_persistent_context(str(SESSION_DIR), headless=headless)
+    ctx: BrowserContext = p.chromium.launch_persistent_context(
+        str(SESSION_DIR), headless=headless
+    )
+    return ctx
 
 
 def _scroll_fully(page: Page) -> None:
@@ -152,9 +155,9 @@ def do_select_classes(config: dict[str, Any]) -> None:
         print("No classes found. Ensure you are logged in to Google Classroom.")
         sys.exit(1)
 
-    from InquirerPy import inquirer
+    from InquirerPy.inquirer import checkbox  # type: ignore[attr-defined]
 
-    selected = inquirer.checkbox(
+    selected = checkbox(
         message="Select classes to scrape (space=toggle, enter=confirm):",
         choices=[{"name": c["name"], "value": c} for c in classes],
     ).execute()
