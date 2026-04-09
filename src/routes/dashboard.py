@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 
-from flask import Blueprint, current_app, render_template
+from flask import Blueprint, current_app, redirect, render_template, url_for
 
 from src.db import get_session
-from src.models import Assignment
+from src.models import Assignment, SelectedClass
+from src.classroom import SESSION_DIR
 
 bp = Blueprint("dashboard", __name__)
 
@@ -43,7 +44,13 @@ def _sort_key(a: Assignment) -> tuple[str, str]:
 def dashboard() -> str:
     engine = current_app.config["DB_ENGINE"]
     with get_session(engine) as session:
+        has_classes = session.query(SelectedClass).count() > 0
+        if not has_classes:
+            return redirect(url_for("setup.setup"))  # type: ignore[return-value]
         assignments = session.query(Assignment).order_by(Assignment.class_name).all()
+
+    # Session validity — quick file-system check, no Playwright overhead
+    session_valid = SESSION_DIR.exists() and any(SESSION_DIR.iterdir())
 
     # Group by class and sort within each class
     by_class: dict[str, list[Assignment]] = defaultdict(list)
@@ -59,7 +66,7 @@ def dashboard() -> str:
             "stats": _class_stats(rows),
         })
 
-    return render_template("dashboard.html", classes=classes)
+    return render_template("dashboard.html", classes=classes, session_valid=session_valid)
 
 
 @bp.route("/class/<path:class_name>")

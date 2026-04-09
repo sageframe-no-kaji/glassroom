@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}Glassroom — Setup{% endblock %}
+{% block content %}
+<h1>Welcome to Glassroom</h1>
+<p style="color:#555;margin-bottom:1.5rem">Let's get you set up. This takes about 2 minutes.</p>
+
+<!-- Step indicators -->
+<div id="steps-nav" style="display:flex;gap:0.5rem;margin-bottom:2rem;flex-wrap:wrap">
+  <div class="step-dot active" id="dot-1">1. Log in</div>
+  <div class="step-dot" id="dot-2">2. Select classes</div>
+  <div class="step-dot" id="dot-3">3. First scrape</div>
+  <div class="step-dot" id="dot-4">4. Download PDFs</div>
+</div>
+
+<!-- Step 1: Login -->
+<div id="step-1" class="setup-card active">
+  <h2>Step 1 — Log in to Google Classroom</h2>
+  <p>We'll open a browser window. Sign in to your Google account that has access to your child's Google Classroom. Once logged in, close or leave that window — we'll detect the login automatically.</p>
+  <p id="login-msg" style="display:none"></p>
+  <button id="btn-login" class="btn btn-primary" onclick="startLogin()">Open browser &amp; log in</button>
+</div>
+
+<!-- Step 2: Select classes -->
+<div id="step-2" class="setup-card" style="display:none">
+  <h2>Step 2 — Select classes to track</h2>
+  <p>Choose which classes you want to follow. You can change this later.</p>
+  <div id="class-list" style="margin:1rem 0"></div>
+  <p id="class-msg" style="display:none;color:#dc2626"></p>
+  <button id="btn-save-classes" class="btn btn-primary" onclick="saveClasses()" disabled>Save &amp; continue</button>
+</div>
+
+<!-- Step 3: First scrape -->
+<div id="step-3" class="setup-card" style="display:none">
+  <h2>Step 3 — Scrape assignments</h2>
+  <p>We'll open the Google Classroom pages for each selected class and collect assignments. This usually takes 1–3 minutes. The browser will be visible so you can see it working.</p>
+  <p id="scrape-msg"></p>
+  <button id="btn-scrape" class="btn btn-primary" onclick="startScrape()">Run first scrape</button>
+</div>
+
+<!-- Step 4: Download PDFs -->
+<div id="step-4" class="setup-card" style="display:none">
+  <h2>Step 4 — Download assignment PDFs</h2>
+  <p>Optional: download PDF attachments for all assignments so you have local copies.</p>
+  <p id="dl-msg"></p>
+  <button id="btn-download" class="btn btn-secondary" onclick="startDownload()">Download PDFs</button>
+  <a id="btn-dashboard" href="/" class="btn btn-primary" style="display:none;margin-left:0.5rem">Go to Dashboard →</a>
+</div>
+
+<style>
+  .setup-card { background:#fff; border:1px solid #e0e0e0; border-radius:6px; padding:1.5rem; max-width:640px; margin-bottom:1.5rem; }
+  .setup-card h2 { margin:0 0 0.6rem; font-size:1.1rem; }
+  .setup-card p  { margin:0 0 0.75rem; color:#555; }
+  .step-dot { padding:0.3rem 0.8rem; border-radius:999px; font-size:0.8rem; font-weight:600; background:#f3f4f6; color:#9ca3af; }
+  .step-dot.active { background:#dbeafe; color:#1e40af; }
+  .step-dot.done   { background:#dcfce7; color:#166534; }
+  .class-option { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0; border-bottom:1px solid #f3f4f6; }
+  .class-option:last-child { border-bottom:none; }
+  .class-option label { cursor:pointer; font-size:0.95rem; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid #bfdbfe; border-top-color:#2563eb; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:0.4rem; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+
+<script>
+  // -----------------------------------------------------------------------
+  // Step 1 — Login
+  // -----------------------------------------------------------------------
+  function startLogin() {
+    const btn = document.getElementById('btn-login');
+    const msg = document.getElementById('login-msg');
+    btn.disabled = true;
+    btn.textContent = 'Opening browser…';
+    msg.style.display = 'block';
+    msg.innerHTML = '<span class="spinner"></span> Waiting for you to log in…';
+
+    fetch('/api/login', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          showLoginError(data.error);
+          return;
+        }
+        pollLogin();
+      })
+      .catch(err => showLoginError(String(err)));
+  }
+
+  function pollLogin() {
+    setTimeout(() => {
+      fetch('/api/login/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'done') {
+            completeStep(1);
+            showStep(2, data.classes || []);
+          } else if (data.status === 'failed') {
+            showLoginError(data.error || 'Login failed');
+          } else {
+            pollLogin();
+          }
+        })
+        .catch(() => pollLogin());
+    }, 2000);
+  }
+
+  function showLoginError(msg) {
+    const el = document.getElementById('login-msg');
+    const btn = document.getElementById('btn-login');
+    el.style.display = 'block';
+    el.style.color = '#dc2626';
+    el.textContent = '⚠ ' + msg;
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+  }
+
+  // -----------------------------------------------------------------------
+  // Step 2 — Class selector
+  // -----------------------------------------------------------------------
+  function showStep(stepNum, classes) {
+    if (stepNum === 2) {
+      document.getElementById('step-2').style.display = 'block';
+      setDotActive(2);
+
+      const list = document.getElementById('class-list');
+      if (!classes || classes.length === 0) {
+        list.innerHTML = '<p style="color:#dc2626">No classes found. Make sure you are logged in and have classes in Google Classroom.</p>';
+        return;
+      }
+      list.innerHTML = classes.map((c, i) =>
+        `<div class="class-option">
+          <input type="checkbox" id="cls-${i}" value="${i}" checked>
+          <label for="cls-${i}">${escHtml(c.name)}</label>
+        </div>`
+      ).join('');
+
+      // Store discovered classes for submission
+      window._discoveredClasses = classes;
+      document.getElementById('btn-save-classes').disabled = false;
+    } else if (stepNum === 3) {
+      document.getElementById('step-3').style.display = 'block';
+      setDotActive(3);
+    } else if (stepNum === 4) {
+      document.getElementById('step-4').style.display = 'block';
+      setDotActive(4);
+    }
+  }
+
+  function saveClasses() {
+    const btn = document.getElementById('btn-save-classes');
+    const msg = document.getElementById('class-msg');
+    const classes = window._discoveredClasses || [];
+
+    const selected = classes.filter((_, i) => {
+      const cb = document.getElementById('cls-' + i);
+      return cb && cb.checked;
+    });
+
+    if (selected.length === 0) {
+      msg.style.display = 'block';
+      msg.textContent = 'Select at least one class.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    fetch('/api/classes/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classes: selected }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          msg.style.display = 'block';
+          msg.textContent = data.error;
+          btn.disabled = false;
+          btn.textContent = 'Save & continue';
+          return;
+        }
+        completeStep(2);
+        showStep(3);
+      })
+      .catch(err => {
+        msg.style.display = 'block';
+        msg.textContent = String(err);
+        btn.disabled = false;
+        btn.textContent = 'Save & continue';
+      });
+  }
+
+  // -----------------------------------------------------------------------
+  // Step 3 — Scrape
+  // -----------------------------------------------------------------------
+  function startScrape() {
+    const btn = document.getElementById('btn-scrape');
+    const msg = document.getElementById('scrape-msg');
+    btn.disabled = true;
+    msg.innerHTML = '<span class="spinner"></span> Starting scrape…';
+
+    fetch('/api/scrape', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          msg.style.color = '#dc2626';
+          msg.textContent = '⚠ ' + data.error;
+          btn.disabled = false;
+          return;
+        }
+        pollScrape();
+      })
+      .catch(err => {
+        msg.style.color = '#dc2626';
+        msg.textContent = '⚠ ' + err;
+        btn.disabled = false;
+      });
+  }
+
+  function pollScrape() {
+    const msg = document.getElementById('scrape-msg');
+    setTimeout(() => {
+      fetch('/api/scrape/status')
+        .then(r => r.json())
+        .then(data => {
+          const p = data.progress || {};
+          if (p.status === 'done') {
+            msg.style.color = '#166534';
+            msg.textContent = `Done — ${p.inserted || 0} inserted, ${p.updated || 0} updated, ${p.skipped || 0} unchanged.`;
+            completeStep(3);
+            showStep(4);
+          } else if (p.status === 'error') {
+            msg.style.color = '#dc2626';
+            msg.textContent = '⚠ ' + (p.message || 'Scrape failed');
+            document.getElementById('btn-scrape').disabled = false;
+          } else {
+            msg.innerHTML = `<span class="spinner"></span> ${p.status || 'Scraping…'}`;
+            pollScrape();
+          }
+        })
+        .catch(() => pollScrape());
+    }, 2500);
+  }
+
+  // -----------------------------------------------------------------------
+  // Step 4 — Download
+  // -----------------------------------------------------------------------
+  function startDownload() {
+    const btn = document.getElementById('btn-download');
+    const msg = document.getElementById('dl-msg');
+    btn.disabled = true;
+    msg.innerHTML = '<span class="spinner"></span> Downloading PDFs…';
+
+    fetch('/api/download', { method: 'POST' })
+      .then(() => {
+        msg.textContent = 'Download started in background. You can go to the dashboard now.';
+        document.getElementById('btn-dashboard').style.display = 'inline-block';
+      })
+      .catch(err => {
+        msg.style.color = '#dc2626';
+        msg.textContent = '⚠ ' + err;
+        btn.disabled = false;
+      });
+  }
+
+  // -----------------------------------------------------------------------
+  // UI helpers
+  // -----------------------------------------------------------------------
+  function completeStep(n) {
+    const dot = document.getElementById('dot-' + n);
+    if (dot) { dot.classList.remove('active'); dot.classList.add('done'); }
+  }
+
+  function setDotActive(n) {
+    const dot = document.getElementById('dot-' + n);
+    if (dot) dot.classList.add('active');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+{% endblock %}

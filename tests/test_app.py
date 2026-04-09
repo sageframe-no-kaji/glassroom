@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 
 from src.app import create_app
 from src.db import init_db, get_session
-from src.models import Assignment
+from src.models import Assignment, SelectedClass
 
 _PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -40,6 +40,7 @@ def _make_app(engine):
     from flask import Flask
     from src.routes.dashboard import bp as dashboard_bp
     from src.routes.api import bp as api_bp
+    from src.routes.setup import bp as setup_bp
 
     template_dir = str(_PROJECT_ROOT / "src" / "templates")
     static_dir = str(_PROJECT_ROOT / "src" / "static")
@@ -47,6 +48,7 @@ def _make_app(engine):
     a.config["DB_ENGINE"] = engine
     a.register_blueprint(dashboard_bp)
     a.register_blueprint(api_bp)
+    a.register_blueprint(setup_bp)
     return a
 
 
@@ -73,6 +75,14 @@ def _make_assignment(session, **kwargs):
     return a
 
 
+def _make_selected_class(session, name="Math", course_url="https://classroom.google.com/c/abc"):
+    """Insert a minimal SelectedClass and return it."""
+    sc = SelectedClass(name=name, course_url=course_url, active=True)
+    session.add(sc)
+    session.commit()
+    return sc
+
+
 # ---------------------------------------------------------------------------
 # Dashboard — GET /
 # ---------------------------------------------------------------------------
@@ -81,23 +91,35 @@ def _make_assignment(session, **kwargs):
 class TestDashboard:
     def test_returns_200(self, client, engine):
         with get_session(engine) as s:
+            _make_selected_class(s)
             _make_assignment(s)
         resp = client.get("/")
         assert resp.status_code == 200
 
     def test_shows_class_name(self, client, engine):
         with get_session(engine) as s:
+            _make_selected_class(s, name="Science")
             _make_assignment(s, class_name="Science")
         resp = client.get("/")
         assert b"Science" in resp.data
 
     def test_shows_assignment_title(self, client, engine):
         with get_session(engine) as s:
+            _make_selected_class(s)
             _make_assignment(s, title="My Essay")
         resp = client.get("/")
         assert b"My Essay" in resp.data
 
-    def test_empty_state(self, client):
+    def test_empty_state_redirects_to_setup(self, client):
+        """No SelectedClass records → redirect to /setup."""
+        resp = client.get("/")
+        assert resp.status_code == 302
+        assert "/setup" in resp.headers.get("Location", "")
+
+    def test_empty_assignments_shows_empty_state(self, client, engine):
+        """SelectedClass exists but no assignments → empty state message."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
         resp = client.get("/")
         assert resp.status_code == 200
         assert b"No assignments" in resp.data

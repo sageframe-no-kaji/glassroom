@@ -10,8 +10,9 @@ from typing import Any
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
+from src.classroom import SESSION_DIR
 from src.db import get_session
-from src.models import Assignment, ScrapeLog
+from src.models import Assignment, SelectedClass, ScrapeLog
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -21,6 +22,13 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 _scrape_lock = threading.Lock()
 _scrape_state: dict[str, Any] = {"running": False, "progress": None}
+
+# ---------------------------------------------------------------------------
+# Login + class discovery state
+# ---------------------------------------------------------------------------
+
+_login_lock = threading.Lock()
+_login_state: dict[str, Any] = {"status": "idle", "classes": [], "error": None}
 
 _DONE_STATUSES = frozenset({"Turned in", "Graded", "Done"})
 _URGENT_STATUSES = frozenset({"Missing"})
@@ -239,6 +247,99 @@ def export_csv() -> Response:
         mimetype="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/login — open Playwright headed browser, wait for login, discover
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/login", methods=["POST"])
+def trigger_login() -> Response:
+    with _login_lock:
+        if _login_state["status"] == "running":
+            return jsonify({"error": "Login already in progress"}), 409  # type: ignore[return-value]
+        _login_state["status"] = "running"
+        _login_state["error"] = None
+        _login_state["classes"] = []
+
+    def _run() -> None:
+        from src.classroom import discover_classes, do_login
+
+        try:
+            do_login()
+            classes = discover_classes()
+            with _login_lock:
+                _login_state["classes"] = classes
+                _login_state["status"] = "done"
+        except Exception as exc:
+            with _login_lock:
+                _login_state["status"] = "failed"
+                _login_state["error"] = str(exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok": True, "message": "Login started"})
+
+
+# ---------------------------------------------------------------------------
+# GET /api/login/status — poll login + discovery progress
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/login/status")
+def login_status() -> Response:
+    with _login_lock:
+        state = dict(_login_state)
+    return jsonify(state)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/session/status — file-system check for valid Playwright session
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/session/status")
+def session_status() -> Response:
+    valid = SESSION_DIR.exists() and any(SESSION_DIR.iterdir())
+    return jsonify({"valid": valid, "path": str(SESSION_DIR)})
+
+
+# ---------------------------------------------------------------------------
+# GET /api/classes/available — return classes discovered at login time
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/classes/available")
+def classes_available() -> Response:
+    with _login_lock:
+        classes = list(_login_state.get("classes", []))
+    return jsonify(classes)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/classes/save — persist selected classes to SelectedClass table
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/classes/save", methods=["POST"])
+def save_classes() -> Response:
+    engine = current_app.config["DB_ENGINE"]
+    data = request.get_json(silent=True) or {}
+    classes: list[dict[str, str]] = data.get("classes", [])
+
+    if not classes:
+        return jsonify({"error": "No classes provided"}), 400  # type: ignore[return-value]
+
+    with get_session(engine) as session:
+        session.query(SelectedClass).delete()
+        for c in classes:
+            session.add(SelectedClass(
+                name=c["name"],
+                course_url=c["course_url"],
+                active=True,
+            ))
+
+    return jsonify({"ok": True, "saved": len(classes)})
 
 
 # ---------------------------------------------------------------------------

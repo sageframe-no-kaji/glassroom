@@ -53,6 +53,10 @@
     details summary::-webkit-details-marker { display: none; }
     .chevron { font-size: 0.8rem; color: #999; transition: transform 0.15s; }
     details[open] .chevron { display: inline-block; transform: rotate(90deg); }
+    .nav-spinner { display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:nspin 0.8s linear infinite; vertical-align:middle; margin-right:0.3rem; }
+    @keyframes nspin { to { transform:rotate(360deg); } }
+    .session-warning { background:#fef2f2; border-bottom:1px solid #fecaca; padding:0.5rem 1.5rem; font-size:0.85rem; color:#991b1b; display:flex; align-items:center; gap:0.75rem; }
+    .session-warning a { color:#991b1b; font-weight:600; }
   </style>
 </head>
 <body>
@@ -61,14 +65,70 @@
   <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Dashboard</a>
   <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}>To Do</a>
   <a href="/downloads" {% if request.path == '/downloads' %}class="active"{% endif %}>Downloads</a>
+  <a href="/setup" {% if request.path == '/setup' %}class="active"{% endif %} style="color:#888">Setup</a>
   <span class="spacer"></span>
+  <span id="scrape-status" style="font-size:0.8rem;color:#888"></span>
   <a href="/api/export/csv" class="btn btn-secondary btn-sm">Export CSV</a>
-  <form action="/api/scrape" method="post" style="margin:0">
-    <button type="submit" class="btn btn-primary btn-sm">Scrape</button>
-  </form>
+  <button id="btn-scrape-nav" class="btn btn-primary btn-sm" onclick="navScrape()">Scrape</button>
 </nav>
+{% if session_valid is defined and not session_valid %}
+<div class="session-warning">
+  ⚠ Google Classroom session expired.
+  <a href="/setup">Re-login →</a>
+</div>
+{% endif %}
 <main>
   {% block content %}{% endblock %}
 </main>
+<script>
+  // Scrape trigger from nav bar
+  function navScrape() {
+    const btn = document.getElementById('btn-scrape-nav');
+    const status = document.getElementById('scrape-status');
+    btn.disabled = true;
+    status.innerHTML = '<span class="nav-spinner"></span> Starting…';
+
+    fetch('/api/scrape', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          status.textContent = '⚠ ' + data.error;
+          btn.disabled = false;
+          return;
+        }
+        pollNavScrape();
+      })
+      .catch(err => {
+        status.textContent = '⚠ ' + err;
+        btn.disabled = false;
+      });
+  }
+
+  function pollNavScrape() {
+    const btn = document.getElementById('btn-scrape-nav');
+    const status = document.getElementById('scrape-status');
+    setTimeout(() => {
+      fetch('/api/scrape/status')
+        .then(r => r.json())
+        .then(data => {
+          const p = data.progress || {};
+          if (p.status === 'done') {
+            status.textContent = `Done — ${p.inserted || 0} new`;
+            btn.disabled = false;
+            setTimeout(() => { status.textContent = ''; }, 5000);
+          } else if (p.status === 'error') {
+            status.textContent = '⚠ Scrape failed';
+            btn.disabled = false;
+          } else if (data.running) {
+            status.innerHTML = '<span class="nav-spinner"></span> ' + (p.status || 'Scraping…');
+            pollNavScrape();
+          } else {
+            btn.disabled = false;
+          }
+        })
+        .catch(() => pollNavScrape());
+    }, 2500);
+  }
+</script>
 </body>
 </html>

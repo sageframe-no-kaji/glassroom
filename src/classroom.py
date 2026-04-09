@@ -112,6 +112,55 @@ def do_login() -> None:
 
 
 # ---------------------------------------------------------------------------
+# discover_classes — web helper (no InquirerPy, no sys.exit)
+# ---------------------------------------------------------------------------
+
+
+def discover_classes() -> list[dict[str, str]]:
+    """Return a list of {name, course_url} dicts from the Classroom sidebar.
+
+    Requires a valid session (i.e., do_login must have been completed).
+    Returns empty list if the session has expired or no classes are found.
+    Does NOT call sys.exit — safe to call from a background thread.
+    """
+    with sync_playwright() as p:
+        ctx = _open_context(p, headless=True)
+        page = ctx.new_page()
+        page.goto(CLASSROOM_HOME, wait_until="domcontentloaded")
+        if "accounts.google.com" in page.url:
+            ctx.close()
+            return []
+
+        try:
+            page.wait_for_selector("a[href*='/c/']", timeout=20_000)
+        except Exception:
+            ctx.close()
+            return []
+
+        classes: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for link in page.query_selector_all("a[href*='/c/']"):
+            href = link.get_attribute("href") or ""
+            if not re.search(r"/c/[^/]+/?$", href):
+                continue
+            url = (
+                f"https://classroom.google.com{href}"
+                if href.startswith("/")
+                else href
+            )
+            if url in seen:
+                continue
+            seen.add(url)
+            lines = [ln.strip() for ln in link.inner_text().split("\n") if ln.strip()]
+            name = lines[1] if len(lines) >= 2 else (lines[0] if lines else "")
+            if name:
+                classes.append({"name": name, "course_url": url})
+
+        ctx.close()
+    return classes
+
+
+# ---------------------------------------------------------------------------
 # select-classes
 # ---------------------------------------------------------------------------
 
