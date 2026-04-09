@@ -4,6 +4,7 @@ import base64
 import re
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -225,23 +226,39 @@ def do_select_classes(config: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def do_scrape(config: dict[str, Any]) -> list[dict[str, Any]]:
-    """Scrape all selected classes. Returns list of assignment dicts."""
+def do_scrape(
+    config: dict[str, Any],
+    headless: bool = True,
+    on_progress: Callable[[str, int, int], None] | None = None,
+) -> list[dict[str, Any]]:
+    """Scrape all selected classes. Returns list of assignment dicts.
+
+    Args:
+        config: dict with 'selected_classes' list.
+        headless: run Playwright headlessly (default True for web use).
+        on_progress: optional callback(class_name, done, total) called
+            before each class starts and after each class finishes.
+    """
     selected = config.get("selected_classes") or []
     if not selected:
         print("No classes selected. Run select-classes first.")
         sys.exit(1)
 
+    total = len(selected)
     all_assignments: list[dict[str, Any]] = []
 
     with sync_playwright() as p:
-        ctx = _open_context(p, headless=False)
-        for cls in selected:
+        ctx = _open_context(p, headless=headless)
+        for i, cls in enumerate(selected):
+            if on_progress:
+                on_progress(cls["name"], i, total)
             course_id = cls["course_url"].rstrip("/").split("/")[-1]
             print(f"Scraping: {cls['name']}", file=sys.stderr)
             assignments = _scrape_course(ctx, course_id, cls["name"])
             all_assignments.extend(assignments)
             print(f"  {len(assignments)} assignments found", file=sys.stderr)
+            if on_progress:
+                on_progress(cls["name"], i + 1, total)
         ctx.close()
 
     return all_assignments

@@ -8,42 +8,57 @@
 <div id="steps-nav" style="display:flex;gap:0.5rem;margin-bottom:2rem;flex-wrap:wrap">
   <div class="step-dot active" id="dot-1">1. Log in</div>
   <div class="step-dot" id="dot-2">2. Select classes</div>
-  <div class="step-dot" id="dot-3">3. First scrape</div>
-  <div class="step-dot" id="dot-4">4. Download PDFs</div>
+  <div class="step-dot" id="dot-3">3. Scrape</div>
+  <div class="step-dot" id="dot-4">4. Done</div>
 </div>
 
 <!-- Step 1: Login -->
 <div id="step-1" class="setup-card active">
   <h2>Step 1 — Log in to Google Classroom</h2>
-  <p>We'll open a browser window. Sign in to your Google account that has access to your child's Google Classroom. Once logged in, close or leave that window — we'll detect the login automatically.</p>
+  <p>We'll open a browser window. Sign in to your Google account that has access to Google Classroom. Once logged in, we'll detect it automatically (usually within a few seconds).</p>
   <p id="login-msg" style="display:none"></p>
   <button id="btn-login" class="btn btn-primary" onclick="startLogin()">Open browser &amp; log in</button>
 </div>
 
-<!-- Step 2: Select classes -->
+<!-- Step 2: Select classes + download option -->
 <div id="step-2" class="setup-card" style="display:none">
   <h2>Step 2 — Select classes to track</h2>
-  <p>Choose which classes you want to follow. You can change this later.</p>
-  <div id="class-list" style="margin:1rem 0"></div>
-  <p id="class-msg" style="display:none;color:#dc2626"></p>
+  <p>Choose which classes to follow. You can change this later under Setup.</p>
+
+  <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+    <button class="btn btn-secondary btn-sm" onclick="selectAll()">Select all</button>
+    <button class="btn btn-secondary btn-sm" onclick="selectNone()">Select none</button>
+  </div>
+
+  <div id="class-list" style="margin-bottom:1rem"></div>
+
+  <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;font-size:0.9rem;cursor:pointer">
+    <input type="checkbox" id="chk-download" checked>
+    <span>Automatically download PDF attachments after scraping</span>
+  </label>
+
+  <p id="class-msg" style="display:none;color:#dc2626;margin-bottom:0.5rem"></p>
   <button id="btn-save-classes" class="btn btn-primary" onclick="saveClasses()" disabled>Save &amp; continue</button>
 </div>
 
-<!-- Step 3: First scrape -->
+<!-- Step 3: Scrape -->
 <div id="step-3" class="setup-card" style="display:none">
   <h2>Step 3 — Scrape assignments</h2>
-  <p>We'll open the Google Classroom pages for each selected class and collect assignments. This usually takes 1–3 minutes. The browser will be visible so you can see it working.</p>
+  <p>We'll collect assignments from each selected class. Runs in the background — no browser window.</p>
+  <div id="scrape-progress-wrap" style="display:none;margin:0.75rem 0">
+    <div id="scrape-class-label" style="font-size:0.85rem;color:#555;margin-bottom:0.4rem"></div>
+    <progress id="scrape-progress-bar" value="0" max="1" style="width:100%;height:8px"></progress>
+    <div id="scrape-count-label" style="font-size:0.8rem;color:#999;margin-top:0.3rem"></div>
+  </div>
   <p id="scrape-msg"></p>
   <button id="btn-scrape" class="btn btn-primary" onclick="startScrape()">Run first scrape</button>
 </div>
 
-<!-- Step 4: Download PDFs -->
+<!-- Step 4: Done -->
 <div id="step-4" class="setup-card" style="display:none">
-  <h2>Step 4 — Download assignment PDFs</h2>
-  <p>Optional: download PDF attachments for all assignments so you have local copies.</p>
-  <p id="dl-msg"></p>
-  <button id="btn-download" class="btn btn-secondary" onclick="startDownload()">Download PDFs</button>
-  <a id="btn-dashboard" href="/" class="btn btn-primary" style="display:none;margin-left:0.5rem">Go to Dashboard →</a>
+  <h2>All done!</h2>
+  <p id="done-msg"></p>
+  <a href="/" class="btn btn-primary">Go to Dashboard →</a>
 </div>
 
 <style>
@@ -58,6 +73,10 @@
   .class-option label { cursor:pointer; font-size:0.95rem; }
   .spinner { display:inline-block; width:14px; height:14px; border:2px solid #bfdbfe; border-top-color:#2563eb; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:0.4rem; }
   @keyframes spin { to { transform:rotate(360deg); } }
+  progress { appearance:none; -webkit-appearance:none; border-radius:4px; background:#e5e7eb; }
+  progress::-webkit-progress-bar { background:#e5e7eb; border-radius:4px; }
+  progress::-webkit-progress-value { background:#2563eb; border-radius:4px; transition:width 0.3s; }
+  progress::-moz-progress-bar { background:#2563eb; border-radius:4px; }
 </style>
 
 <script>
@@ -70,15 +89,13 @@
     btn.disabled = true;
     btn.textContent = 'Opening browser…';
     msg.style.display = 'block';
+    msg.style.color = '#555';
     msg.innerHTML = '<span class="spinner"></span> Waiting for you to log in…';
 
     fetch('/api/login', { method: 'POST' })
       .then(r => r.json())
       .then(data => {
-        if (data.error) {
-          showLoginError(data.error);
-          return;
-        }
+        if (data.error) { showLoginError(data.error); return; }
         pollLogin();
       })
       .catch(err => showLoginError(String(err)));
@@ -91,7 +108,7 @@
         .then(data => {
           if (data.status === 'done') {
             completeStep(1);
-            showStep(2, data.classes || []);
+            showStep2(data.classes || []);
           } else if (data.status === 'failed') {
             showLoginError(data.error || 'Login failed');
           } else {
@@ -115,33 +132,31 @@
   // -----------------------------------------------------------------------
   // Step 2 — Class selector
   // -----------------------------------------------------------------------
-  function showStep(stepNum, classes) {
-    if (stepNum === 2) {
-      document.getElementById('step-2').style.display = 'block';
-      setDotActive(2);
+  function showStep2(classes) {
+    document.getElementById('step-2').style.display = 'block';
+    setDotActive(2);
 
-      const list = document.getElementById('class-list');
-      if (!classes || classes.length === 0) {
-        list.innerHTML = '<p style="color:#dc2626">No classes found. Make sure you are logged in and have classes in Google Classroom.</p>';
-        return;
-      }
-      list.innerHTML = classes.map((c, i) =>
-        `<div class="class-option">
-          <input type="checkbox" id="cls-${i}" value="${i}" checked>
-          <label for="cls-${i}">${escHtml(c.name)}</label>
-        </div>`
-      ).join('');
-
-      // Store discovered classes for submission
-      window._discoveredClasses = classes;
-      document.getElementById('btn-save-classes').disabled = false;
-    } else if (stepNum === 3) {
-      document.getElementById('step-3').style.display = 'block';
-      setDotActive(3);
-    } else if (stepNum === 4) {
-      document.getElementById('step-4').style.display = 'block';
-      setDotActive(4);
+    const list = document.getElementById('class-list');
+    if (!classes || classes.length === 0) {
+      list.innerHTML = '<p style="color:#dc2626">No classes found. Make sure you are logged in and have classes in Google Classroom.</p>';
+      return;
     }
+    list.innerHTML = classes.map((c, i) =>
+      `<div class="class-option">
+        <input type="checkbox" id="cls-${i}" value="${i}" checked>
+        <label for="cls-${i}">${escHtml(c.name)}</label>
+      </div>`
+    ).join('');
+    window._discoveredClasses = classes;
+    document.getElementById('btn-save-classes').disabled = false;
+  }
+
+  function selectAll() {
+    document.querySelectorAll('#class-list input[type=checkbox]').forEach(cb => cb.checked = true);
+  }
+
+  function selectNone() {
+    document.querySelectorAll('#class-list input[type=checkbox]').forEach(cb => cb.checked = false);
   }
 
   function saveClasses() {
@@ -177,8 +192,9 @@
           btn.textContent = 'Save & continue';
           return;
         }
+        btn.textContent = '✓ Saved';
         completeStep(2);
-        showStep(3);
+        showStep3();
       })
       .catch(err => {
         msg.style.display = 'block';
@@ -191,31 +207,38 @@
   // -----------------------------------------------------------------------
   // Step 3 — Scrape
   // -----------------------------------------------------------------------
+  function showStep3() {
+    document.getElementById('step-3').style.display = 'block';
+    setDotActive(3);
+  }
+
   function startScrape() {
     const btn = document.getElementById('btn-scrape');
     const msg = document.getElementById('scrape-msg');
-    btn.disabled = true;
-    msg.innerHTML = '<span class="spinner"></span> Starting scrape…';
+    const autoDownload = document.getElementById('chk-download').checked;
 
-    fetch('/api/scrape', { method: 'POST' })
+    btn.disabled = true;
+    btn.style.display = 'none';
+    msg.innerHTML = '<span class="spinner"></span> Starting scrape…';
+    document.getElementById('scrape-progress-wrap').style.display = 'block';
+
+    fetch('/api/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_download: autoDownload }),
+    })
       .then(r => r.json())
       .then(data => {
         if (data.error) {
-          msg.style.color = '#dc2626';
-          msg.textContent = '⚠ ' + data.error;
-          btn.disabled = false;
+          showScrapeError(data.error);
           return;
         }
-        pollScrape();
+        pollScrape(autoDownload);
       })
-      .catch(err => {
-        msg.style.color = '#dc2626';
-        msg.textContent = '⚠ ' + err;
-        btn.disabled = false;
-      });
+      .catch(err => showScrapeError(String(err)));
   }
 
-  function pollScrape() {
+  function pollScrape(autoDownload) {
     const msg = document.getElementById('scrape-msg');
     setTimeout(() => {
       fetch('/api/scrape/status')
@@ -223,42 +246,58 @@
         .then(data => {
           const p = data.progress || {};
           if (p.status === 'done') {
+            updateProgressBar(1, 1, 'Complete');
             msg.style.color = '#166534';
-            msg.textContent = `Done — ${p.inserted || 0} inserted, ${p.updated || 0} updated, ${p.skipped || 0} unchanged.`;
+            msg.textContent = `Done — ${p.inserted || 0} new, ${p.updated || 0} updated, ${p.skipped || 0} unchanged.`;
             completeStep(3);
-            showStep(4);
+            showStep4(autoDownload, p);
           } else if (p.status === 'error') {
-            msg.style.color = '#dc2626';
-            msg.textContent = '⚠ ' + (p.message || 'Scrape failed');
-            document.getElementById('btn-scrape').disabled = false;
+            showScrapeError(p.message || 'Scrape failed');
           } else {
-            msg.innerHTML = `<span class="spinner"></span> ${p.status || 'Scraping…'}`;
-            pollScrape();
+            const done = p.classes_done || 0;
+            const total = p.classes_total || 1;
+            const label = p.current_class ? `Scraping: ${p.current_class}` : 'Scraping…';
+            updateProgressBar(done, total, label);
+            msg.innerHTML = '<span class="spinner"></span> ' + label;
+            pollScrape(autoDownload);
           }
         })
-        .catch(() => pollScrape());
-    }, 2500);
+        .catch(() => pollScrape(autoDownload));
+    }, 2000);
+  }
+
+  function updateProgressBar(done, total, label) {
+    const bar = document.getElementById('scrape-progress-bar');
+    const classLabel = document.getElementById('scrape-class-label');
+    const countLabel = document.getElementById('scrape-count-label');
+    bar.max = total;
+    bar.value = done;
+    classLabel.textContent = label;
+    countLabel.textContent = total > 0 ? `${done} of ${total} classes` : '';
+  }
+
+  function showScrapeError(errMsg) {
+    const msg = document.getElementById('scrape-msg');
+    const btn = document.getElementById('btn-scrape');
+    msg.style.color = '#dc2626';
+    msg.textContent = '⚠ ' + errMsg;
+    btn.disabled = false;
+    btn.style.display = '';
   }
 
   // -----------------------------------------------------------------------
-  // Step 4 — Download
+  // Step 4 — Done
   // -----------------------------------------------------------------------
-  function startDownload() {
-    const btn = document.getElementById('btn-download');
-    const msg = document.getElementById('dl-msg');
-    btn.disabled = true;
-    msg.innerHTML = '<span class="spinner"></span> Downloading PDFs…';
-
-    fetch('/api/download', { method: 'POST' })
-      .then(() => {
-        msg.textContent = 'Download started in background. You can go to the dashboard now.';
-        document.getElementById('btn-dashboard').style.display = 'inline-block';
-      })
-      .catch(err => {
-        msg.style.color = '#dc2626';
-        msg.textContent = '⚠ ' + err;
-        btn.disabled = false;
-      });
+  function showStep4(autoDownload, progress) {
+    document.getElementById('step-4').style.display = 'block';
+    setDotActive(4);
+    completeStep(4);
+    const doneMsg = document.getElementById('done-msg');
+    if (autoDownload) {
+      doneMsg.textContent = 'Scrape complete. PDF download is running in the background — check the Downloads page once it finishes.';
+    } else {
+      doneMsg.textContent = 'Scrape complete. You can download PDFs any time from the Downloads page.';
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -279,3 +318,4 @@
   }
 </script>
 {% endblock %}
+

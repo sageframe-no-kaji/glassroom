@@ -21,7 +21,11 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 # ---------------------------------------------------------------------------
 
 _scrape_lock = threading.Lock()
-_scrape_state: dict[str, Any] = {"running": False, "progress": None}
+_scrape_state: dict[str, Any] = {
+    "running": False,
+    "progress": None,
+    "auto_download": False,
+}
 
 # ---------------------------------------------------------------------------
 # Login + class discovery state
@@ -89,23 +93,50 @@ def get_assignments() -> Response:
 
 @bp.route("/scrape", methods=["POST"])
 def trigger_scrape() -> Response:
+    data = request.get_json(silent=True) or {}
+    auto_download: bool = bool(data.get("auto_download", False))
+
     with _scrape_lock:
         if _scrape_state["running"]:
             return jsonify({"error": "Scrape already running"}), 409  # type: ignore[return-value]
         _scrape_state["running"] = True
+        _scrape_state["auto_download"] = auto_download
         _scrape_state["progress"] = {"status": "starting"}
 
     engine = current_app.config["DB_ENGINE"]
 
     def _run() -> None:
-        from src.config import load_config
         from src.classroom import do_scrape
         import src.db as db
 
+        # Build config from DB so web-selected classes are used, not config.json
         try:
-            config = load_config()
-            _scrape_state["progress"] = {"status": "scraping"}
-            assignments = do_scrape(config)
+            with db.get_session(engine) as session:
+                selected = [
+                    {"name": sc.name, "course_url": sc.course_url}
+                    for sc in session.query(SelectedClass)
+                    .filter(SelectedClass.active == True)  # noqa: E712
+                    .all()
+                ]
+
+            config = {"selected_classes": selected}
+            total = len(selected)
+
+            def _on_progress(class_name: str, done: int, total_: int) -> None:
+                _scrape_state["progress"] = {
+                    "status": "scraping",
+                    "current_class": class_name,
+                    "classes_done": done,
+                    "classes_total": total_,
+                }
+
+            _scrape_state["progress"] = {
+                "status": "scraping",
+                "current_class": "",
+                "classes_done": 0,
+                "classes_total": total,
+            }
+            assignments = do_scrape(config, headless=True, on_progress=_on_progress)
 
             inserted = updated = skipped = 0
             for a in assignments:
@@ -117,11 +148,10 @@ def trigger_scrape() -> Response:
                 else:
                     skipped += 1
 
-            # Write scrape log
             with db.get_session(engine) as session:
                 log = ScrapeLog(
                     timestamp=datetime.now(timezone.utc).isoformat(),
-                    classes_scraped=len(config.get("selected_classes", [])),
+                    classes_scraped=total,
                     assignments_inserted=inserted,
                     assignments_updated=updated,
                     assignments_unchanged=skipped,
@@ -134,6 +164,11 @@ def trigger_scrape() -> Response:
                 "updated": updated,
                 "skipped": skipped,
             }
+
+            # Trigger download if requested
+            if _scrape_state.get("auto_download"):
+                _start_download()
+
         except Exception as exc:
             _scrape_state["progress"] = {"status": "error", "message": str(exc)}
         finally:
@@ -163,6 +198,12 @@ def scrape_status() -> Response:
 
 @bp.route("/download", methods=["POST"])
 def trigger_download() -> Response:
+    _start_download()
+    return jsonify({"ok": True, "message": "Download started"})
+
+
+def _start_download() -> None:
+    """Spawn the download thread. Safe to call from another background thread."""
     def _run() -> None:
         from src.config import load_config
         from src.downloader import do_download_attachments
@@ -170,7 +211,6 @@ def trigger_download() -> Response:
         do_download_attachments(config)
 
     threading.Thread(target=_run, daemon=True).start()
-    return jsonify({"ok": True, "message": "Download started"})
 
 
 # ---------------------------------------------------------------------------
