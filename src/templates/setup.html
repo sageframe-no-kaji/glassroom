@@ -32,11 +32,6 @@
 
   <div id="class-list" style="margin-bottom:1rem"></div>
 
-  <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;font-size:0.9rem;cursor:pointer">
-    <input type="checkbox" id="chk-download" checked>
-    <span>Automatically download PDF attachments after scraping</span>
-  </label>
-
   <p id="class-msg" style="display:none;color:#dc2626;margin-bottom:0.5rem"></p>
   <button id="btn-save-classes" class="btn btn-primary" onclick="saveClasses()" disabled>Save &amp; continue</button>
 </div>
@@ -44,7 +39,16 @@
 <!-- Step 3: Scrape -->
 <div id="step-3" class="setup-card" style="display:none">
   <h2>Step 3 — Scrape assignments</h2>
-  <p>We'll collect assignments from each selected class. Runs in the background — no browser window.</p>
+  {% if has_classes %}
+  <p>Tracking: {{ class_names | join(', ') }}.</p>
+  {% endif %}
+  <p>Runs in the background — no browser window needed.</p>
+
+  <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;font-size:0.9rem;cursor:pointer">
+    <input type="checkbox" id="chk-download" checked>
+    <span>Automatically download PDF attachments after scraping</span>
+  </label>
+
   <div id="scrape-progress-wrap" style="display:none;margin:0.75rem 0">
     <div id="scrape-class-label" style="font-size:0.85rem;color:#555;margin-bottom:0.4rem"></div>
     <progress id="scrape-progress-bar" value="0" max="1" style="width:100%;height:8px"></progress>
@@ -316,6 +320,49 @@
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  // -----------------------------------------------------------------------
+  // Page load — skip to step 3 if already configured
+  // -----------------------------------------------------------------------
+  window.addEventListener('DOMContentLoaded', function() {
+    const hasClasses = {{ has_classes | tojson }};
+    if (hasClasses) {
+      completeStep(1);
+      completeStep(2);
+      document.getElementById('step-1').style.display = 'none';
+      document.getElementById('step-2').style.display = 'none';
+      document.getElementById('step-3').style.display = 'block';
+      setDotActive(3);
+
+      // Check if a scrape is already running and pick it up
+      fetch('/api/scrape/status')
+        .then(r => r.json())
+        .then(data => {
+          const p = data.progress || {};
+          if (data.running) {
+            const autoDownload = {{ has_classes | tojson }};  // doesn't matter, not re-triggering
+            document.getElementById('scrape-progress-wrap').style.display = 'block';
+            document.getElementById('btn-scrape').style.display = 'none';
+            document.getElementById('scrape-msg').innerHTML = '<span class="spinner"></span> Scrape already running…';
+            pollScrape(false);
+          } else if (p.status === 'done') {
+            updateProgressBar(1, 1, 'Complete');
+            document.getElementById('scrape-progress-wrap').style.display = 'block';
+            const msg = document.getElementById('scrape-msg');
+            msg.style.color = '#166534';
+            msg.textContent = `Last scrape done \u2014 ${p.inserted || 0} new, ${p.updated || 0} updated, ${p.skipped || 0} unchanged.`;
+            document.getElementById('btn-scrape').textContent = 'Re-scrape';
+            completeStep(3);
+            document.getElementById('step-4').style.display = 'block';
+            setDotActive(4);
+            completeStep(4);
+            document.getElementById('done-msg').textContent = 'Data is up to date. Go to the dashboard to see assignments.';
+          }
+          // If idle/null, just show the button — user can click to start
+        })
+        .catch(() => {});
+    }
+  });
 </script>
 {% endblock %}
 

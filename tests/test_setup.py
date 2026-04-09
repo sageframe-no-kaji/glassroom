@@ -70,11 +70,13 @@ class TestSetupPage:
         assert resp.status_code == 200
         assert b"Step 1" in resp.data
 
-    def test_redirects_to_dashboard_when_classes_exist(self, client, engine):
+    def test_shows_step3_when_classes_exist(self, client, engine):
+        """When classes are already configured, /setup renders step 3 directly."""
         _add_selected_class(engine)
         resp = client.get("/setup")
-        assert resp.status_code == 302
-        assert "/" in resp.headers.get("Location", "")
+        assert resp.status_code == 200
+        assert b"has_classes" not in resp.data  # Jinja resolved it
+        assert b"Scrape assignments" in resp.data
 
     def test_setup_page_contains_login_button(self, client):
         resp = client.get("/setup")
