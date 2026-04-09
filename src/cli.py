@@ -4,13 +4,15 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.baserow_client import BaserowClient
+import src.db as db
 from src.config import load_config
 
 LOGS_DIR = Path(__file__).parent.parent / "logs"
 
 
 def cmd_setup_baserow(args: argparse.Namespace) -> None:
+    from src.baserow_client import BaserowClient
+
     config = load_config()
     client = BaserowClient()
     config = client.setup(config)
@@ -113,6 +115,12 @@ def cmd_dump_dom(args: argparse.Namespace) -> None:
     print(f"Written to {out}")
 
 
+def cmd_download_attachments(args: argparse.Namespace) -> None:
+    from src.downloader import do_download_attachments
+
+    do_download_attachments(load_config(), force=args.force)
+
+
 def cmd_scrape(args: argparse.Namespace) -> None:
     from src.classroom import do_scrape
 
@@ -130,13 +138,12 @@ def cmd_scrape(args: argparse.Namespace) -> None:
         print(json.dumps(assignments, indent=2, ensure_ascii=False))
         return
 
-    client = BaserowClient()
-    table_id = config["baserow_table_id"]
-    field_ids = config["baserow_field_ids"]
-
+    # Write to SQLite (default)
+    db.init_db()
+    engine = db.get_engine()
     inserted = updated = skipped = 0
     for assignment in assignments:
-        outcome = client.upsert(assignment, table_id, field_ids)
+        outcome = db.upsert(assignment, engine=engine)
         if outcome == "inserted":
             inserted += 1
         elif outcome == "updated":
@@ -144,13 +151,35 @@ def cmd_scrape(args: argparse.Namespace) -> None:
         else:
             skipped += 1
 
-    print(f"Baserow: {inserted} inserted, {updated} updated, {skipped} unchanged")
+    print(f"SQLite: {inserted} inserted, {updated} updated, {skipped} unchanged")
+
+    # Optionally also push to Baserow
+    if args.export_baserow:
+        from src.baserow_client import BaserowClient
+
+        client = BaserowClient()
+        table_id = config["baserow_table_id"]
+        field_ids = config["baserow_field_ids"]
+
+        br_inserted = br_updated = br_skipped = 0
+        for assignment in assignments:
+            outcome = client.upsert(assignment, table_id, field_ids)
+            if outcome == "inserted":
+                br_inserted += 1
+            elif outcome == "updated":
+                br_updated += 1
+            else:
+                br_skipped += 1
+
+        print(
+            f"Baserow: {br_inserted} inserted, {br_updated} updated, {br_skipped} unchanged"
+        )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="src.cli",
-        description="Classroom scraper — Google Classroom → Baserow",
+        description="Glassroom — Google Classroom scraper",
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
@@ -164,16 +193,32 @@ def main() -> None:
     sp = subparsers.add_parser("select-classes", help="Choose which classes to scrape")
     sp.set_defaults(func=cmd_select_classes)
 
-    sp = subparsers.add_parser("scrape", help="Scrape selected classes and push to Baserow")
+    sp = subparsers.add_parser("scrape", help="Scrape selected classes and write to SQLite")
     sp.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print scraped JSON without writing to Baserow",
+        help="Print scraped JSON without writing to any storage",
+    )
+    sp.add_argument(
+        "--export-baserow",
+        action="store_true",
+        help="Also push scraped data to Baserow after writing to SQLite",
     )
     sp.set_defaults(func=cmd_scrape)
 
     sp = subparsers.add_parser("dump-dom", help="Dump classwork page links for debugging selectors")
     sp.set_defaults(func=cmd_dump_dom)
+
+    sp = subparsers.add_parser(
+        "download-attachments",
+        help="Download Google Doc/Slides/Sheet attachments as PDFs",
+    )
+    sp.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-download all files, even if already present in manifest",
+    )
+    sp.set_defaults(func=cmd_download_attachments)
 
     args = parser.parse_args()
     args.func(args)

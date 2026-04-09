@@ -417,7 +417,7 @@ def _scrape_detail(page: Page, stub: dict[str, Any]) -> dict[str, Any] | None:
     yw = re.search(r"Your work\s*\n(.+?)(?:\nPrivate comments|\nClass comments|$)", visible, re.DOTALL)
     if yw:
         panel_text = yw.group(1)
-        for s in ("Turned in", "Graded", "Missing", "Assigned", "Done"):
+        for s in ("Turned in", "Graded", "Missing", "Assigned", "Done", "Excused"):
             if s in panel_text:
                 status = s
                 break

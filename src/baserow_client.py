@@ -44,6 +44,7 @@ FIELD_SPECS: list[dict[str, Any]] = [
             {"value": "Graded", "color": "light-cyan"},
             {"value": "Missing", "color": "light-red"},
             {"value": "Done", "color": "light-gray"},
+            {"value": "Excused", "color": "light-purple"},
             {"value": "Unknown", "color": "light-gray"},
         ],
     },
@@ -518,6 +519,24 @@ class BaserowClient:
             for name, value in field_data.items()
             if name in field_ids
         }
+
+    def get_all_rows(self, table_id: int) -> list[dict[str, Any]]:
+        """Fetch every row in a table, paginating until exhausted."""
+        rows: list[dict[str, Any]] = []
+        page = 1
+        page_size = 200
+        while True:
+            resp = self._request(
+                "GET",
+                f"/api/database/rows/table/{table_id}/",
+                params={"page": page, "size": page_size},
+            )
+            data = resp.json()
+            rows.extend(data.get("results", []))
+            if not data.get("next"):
+                break
+            page += 1
+        return rows
 
     def _has_changes(
         self,

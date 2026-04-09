@@ -23,10 +23,6 @@ def save_config(config: dict[str, Any]) -> None:
 
 def _default_config() -> dict[str, Any]:
     return {
-        "baserow_workspace_id": None,
-        "baserow_database_id": None,
-        "baserow_table_id": None,
-        "baserow_field_ids": {},
         "selected_classes": [],
     }
 

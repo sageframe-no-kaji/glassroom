@@ -2,6 +2,7 @@
 .classroom-session/
 prompts/
 logs/
+downloads/
 __pycache__/
 *.pyc
 .venv/
