@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Glassroom{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:baseline; gap:1rem; margin-bottom:1rem;">
+  <h1 style="margin:0">Dashboard</h1>
+  <a href="/api/export/csv" class="btn btn-secondary btn-sm">Export all CSV</a>
+</div>
+
+{% if not classes %}
+  <div class="empty-state">
+    <p>No assignments yet.</p>
+    <p>Run a scrape to get started, or <a href="/setup">open setup</a> if this is your first time.</p>
+  </div>
+{% else %}
+  {% for cls in classes %}
+  <details open>
+    <summary>
+      <div class="card-header">
+        <span class="chevron">▶</span>
+        <h2>{{ cls.name }}</h2>
+        <div class="stats">
+          <span class="stat"><span class="stat-val">{{ cls.stats.total }}</span> total</span>
+          <span class="stat stat-missing"><span class="stat-val">{{ cls.stats.missing }}</span> missing</span>
+          <span class="stat stat-attention"><span class="stat-val">{{ cls.stats.needs_attention }}</span> to do</span>
+          <span class="stat"><span class="stat-val">{{ cls.stats.done }}</span> done</span>
+        </div>
+        <span class="spacer"></span>
+        <a href="/class/{{ cls.name | urlencode }}" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">View class</a>
+      </div>
+    </summary>
+    <div class="card">
+      <div class="card-body">
+        {% if cls.assignments %}
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Due</th>
+              <th>Status</th>
+              <th>Points</th>
+              <th>Grade</th>
+              <th>Turn in?</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in cls.assignments %}
+            <tr>
+              <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
+              <td style="white-space:nowrap">{{ a.due_date or '—' }}</td>
+              <td>{% include "partials/status_badge.html" %}</td>
+              <td>{{ a.points_possible or '—' }}</td>
+              <td>{{ a.grade or '—' }}</td>
+              <td>{% if a.turn_in_required %}<span class="turn-in-badge">yes</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">No assignments.</div>
+        {% endif %}
+      </div>
+    </div>
+  </details>
+  {% endfor %}
+{% endif %}
+
+{% endblock %}

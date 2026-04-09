@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Downloads — Glassroom{% endblock %}
+{% block content %}
+
+<h1>Downloaded PDFs</h1>
+
+{% if not pdf_tree %}
+  <div class="empty-state">
+    <p>No PDFs downloaded yet.</p>
+    <p>
+      <form action="/api/download" method="post" style="display:inline">
+        <button type="submit" class="btn btn-primary">Download attachments</button>
+      </form>
+    </p>
+  </div>
+{% else %}
+  {% for class_slug, pdfs in pdf_tree.items() %}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header" style="cursor:default">
+      <h2>{{ class_slug }}</h2>
+      <span style="font-size:0.82rem; color:#888; margin-left:0.5rem">{{ pdfs | length }} file{% if pdfs | length != 1 %}s{% endif %}</span>
+    </div>
+    <div class="card-body">
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pdf in pdfs %}
+          <tr>
+            <td><a href="{{ pdf.url }}" target="_blank" rel="noopener">{{ pdf.name }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+{% endif %}
+
+{% endblock %}

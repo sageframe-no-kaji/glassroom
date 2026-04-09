@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}To Do — Glassroom{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:baseline; gap:1rem; margin-bottom:1rem;">
+  <h1 style="margin:0">To Do</h1>
+  <span style="font-size:0.85rem; color:#666">Turn-in required, not yet submitted</span>
+  <div style="flex:1"></div>
+  <a href="/api/export/csv?view=todo" class="btn btn-secondary btn-sm">Export CSV</a>
+</div>
+
+{% if not classes %}
+  <div class="empty-state">
+    <p>Nothing to do! All assignments are submitted or complete.</p>
+  </div>
+{% else %}
+  {% for cls in classes %}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header" style="cursor:default">
+      <h2>{{ cls.name }}</h2>
+      <span style="font-size:0.82rem; color:#888; margin-left:0.5rem">{{ cls.assignments | length }} remaining</span>
+      <span class="spacer"></span>
+      <a href="/api/export/csv?view=todo&class={{ cls.name | urlencode }}" class="btn btn-secondary btn-sm">Export</a>
+    </div>
+    <div class="card-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Due</th>
+            <th>Status</th>
+            <th>Points</th>
+            <th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in cls.assignments %}
+          <tr>
+            <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
+            <td style="white-space:nowrap; font-size:0.8rem; color:#666">{{ a.category or '—' }}</td>
+            <td style="white-space:nowrap">{{ a.due_date or '—' }}</td>
+            <td>{% include "partials/status_badge.html" %}</td>
+            <td>{{ a.points_possible or '—' }}</td>
+            <td>{{ a.grade or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+{% endif %}
+
+{% endblock %}

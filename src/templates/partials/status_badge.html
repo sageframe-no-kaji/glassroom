@@ -1,0 +1,16 @@
+{% set s = a.status or 'Unknown' %}
+{% if s == 'Assigned' %}
+  <span class="badge badge-assigned">Assigned</span>
+{% elif s == 'Turned in' %}
+  <span class="badge badge-turned-in">Turned in</span>
+{% elif s == 'Graded' %}
+  <span class="badge badge-graded">Graded</span>
+{% elif s == 'Done' %}
+  <span class="badge badge-done">Done</span>
+{% elif s == 'Missing' %}
+  <span class="badge badge-missing">Missing</span>
+{% elif s == 'Excused' %}
+  <span class="badge badge-excused">Excused</span>
+{% else %}
+  <span class="badge badge-unknown">{{ s }}</span>
+{% endif %}
