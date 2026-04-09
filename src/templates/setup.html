@@ -25,10 +25,12 @@
   <h2 id="step-2-heading">Step 2 — Select classes to track</h2>
   <p id="step-2-desc">Choose which classes to follow. You can change this later under Setup.</p>
 
-  <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+  <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;align-items:center">
     <button class="btn btn-secondary btn-sm" onclick="selectAll()">Select all</button>
     <button class="btn btn-secondary btn-sm" onclick="selectNone()">Select none</button>
+    <button id="btn-find-more" class="btn btn-secondary btn-sm" onclick="findMoreClasses()" style="margin-left:auto">Find more classes…</button>
   </div>
+  <p id="find-more-msg" style="display:none;font-size:0.85rem;color:#555;margin-bottom:0.5rem"></p>
 
   <div id="class-list" style="margin-bottom:1rem"></div>
 
@@ -136,6 +138,64 @@
   // -----------------------------------------------------------------------
   // Step 2 — Class selector
   // -----------------------------------------------------------------------
+
+  // Re-discover classes without resetting (keeps current checked state)
+  function findMoreClasses() {
+    const btn = document.getElementById('btn-find-more');
+    const msg = document.getElementById('find-more-msg');
+    btn.disabled = true;
+    msg.style.display = 'block';
+    msg.innerHTML = '<span class="spinner"></span> Opening browser to discover classes…';
+
+    fetch('/api/login', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          msg.style.color = '#dc2626';
+          msg.textContent = '⚠ ' + data.error;
+          btn.disabled = false;
+          return;
+        }
+        pollDiscover();
+      })
+      .catch(err => {
+        msg.style.color = '#dc2626';
+        msg.textContent = '⚠ ' + String(err);
+        btn.disabled = false;
+      });
+  }
+
+  function pollDiscover() {
+    const msg = document.getElementById('find-more-msg');
+    const btn = document.getElementById('btn-find-more');
+    setTimeout(() => {
+      fetch('/api/login/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'done') {
+            const classes = data.classes || [];
+            // Preserve currently checked names
+            const currentlyChecked = new Set();
+            document.querySelectorAll('#class-list input[type=checkbox]:checked').forEach(cb => {
+              const label = cb.nextElementSibling;
+              if (label) currentlyChecked.add(label.textContent.trim());
+            });
+            renderClassList(classes, currentlyChecked.size > 0 ? currentlyChecked : null);
+            msg.style.color = '#166534';
+            msg.textContent = `Found ${classes.length} class${classes.length !== 1 ? 'es' : ''}.`;
+            btn.disabled = false;
+          } else if (data.status === 'failed') {
+            msg.style.color = '#dc2626';
+            msg.textContent = '⚠ ' + (data.error || 'Discovery failed');
+            btn.disabled = false;
+          } else {
+            pollDiscover();
+          }
+        })
+        .catch(() => pollDiscover());
+    }, 2000);
+  }
+
   function renderClassList(classes, selectedNames) {
     // selectedNames: Set of names to pre-check, or null for all unchecked
     window._discoveredClasses = classes;
