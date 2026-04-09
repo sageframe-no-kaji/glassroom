@@ -194,12 +194,13 @@ def upsert(
             .first()
         )
 
+        _managed = {"first_seen_at", "last_modified_at", "scraped_at"}
         if existing is None:
             row = Assignment(
                 first_seen_at=now,
                 last_modified_at=now,
                 scraped_at=now,
-                **{k: v for k, v in field_data.items() if hasattr(Assignment, k)},
+                **{k: v for k, v in field_data.items() if hasattr(Assignment, k) and k not in _managed},
             )
             session.add(row)
             return "inserted"
