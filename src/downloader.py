@@ -11,9 +11,9 @@ from typing import Any
 from playwright.sync_api import sync_playwright
 
 from src.classroom import _open_context
+from src.config import DATA_DIR
 
-# Absolute so it resolves correctly regardless of CWD
-DOWNLOADS_DIR = Path(__file__).parent.parent / "downloads"
+DOWNLOADS_DIR = DATA_DIR / "downloads"
 
 _GDOC_RE = re.compile(r"docs\.google\.com/document/d/([^/?#]+)")
 _GSLIDE_RE = re.compile(r"docs\.google\.com/presentation/d/([^/?#]+)")

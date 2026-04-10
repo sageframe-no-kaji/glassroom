@@ -1,0 +1,16 @@
+services:
+  glassroom:
+    build: .
+    ports:
+      - "3000:3000"    # Glassroom dashboard
+      - "6080:6080"    # noVNC — used only during first-time login setup
+    volumes:
+      - ./data:/app/data                      # SQLite DB, downloads, config
+      - glassroom-session:/root/.classroom-session  # Google login session
+    environment:
+      - FLASK_ENV=production
+      - GLASSROOM_DATA_DIR=/app/data
+    restart: unless-stopped
+
+volumes:
+  glassroom-session:

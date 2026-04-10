@@ -18,9 +18,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from src.config import DATA_DIR
 from src.models import Assignment, Base
 
-DB_PATH = Path(__file__).parent.parent / "data" / "classroom.db"
+DB_PATH = DATA_DIR / "classroom.db"
 
 # Fields compared to detect real changes. Housekeeping timestamps and
 # manual/ai fields are excluded — they must never trigger spurious updates.

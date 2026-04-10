@@ -1,0 +1,28 @@
+.venv/
+.git/
+.github/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.pyc
+__pycache__/
+.DS_Store
+
+# Secrets
+.env
+
+# User data — persisted via bind mount, not in image
+data/
+downloads/
+logs/
+
+# Dev-only files
+tests/
+prompts/
+*.md
+mypy.ini
+requirements.txt
+
+# Playwright session — persisted via named volume
+.classroom-session/

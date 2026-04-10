@@ -5,7 +5,17 @@ from typing import Any, cast
 
 from dotenv import load_dotenv
 
-CONFIG_PATH = Path(__file__).parent.parent / "config.json"
+# Central data directory.  Override with GLASSROOM_DATA_DIR env var so Docker
+# can bind-mount ./data:/app/data without touching source code.
+DATA_DIR = Path(
+    os.environ.get(
+        "GLASSROOM_DATA_DIR",
+        str(Path(__file__).parent.parent / "data"),
+    )
+)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+CONFIG_PATH = DATA_DIR / "config.json"
 
 
 def load_config() -> dict[str, Any]:

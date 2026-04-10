@@ -11,3 +11,8 @@ __pycache__/
 config.json
 .claude/
 src/dump-*.json
+
+# Data directory — keep the folder, ignore generated files
+data/classroom.db
+data/config.json
+data/downloads/
