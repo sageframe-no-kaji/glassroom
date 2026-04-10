@@ -26,9 +26,27 @@ _ITEM_TYPE_MATERIAL = "5"
 # ---------------------------------------------------------------------------
 
 
+def _clear_singleton_lock(session_dir: Path) -> None:
+    """Remove Chromium lock files left by a crashed or force-killed process.
+
+    Chromium creates SingletonLock, SingletonSocket, and SingletonCookie in
+    the profile directory to prevent multiple instances. If the previous
+    process died without cleanup, these files block the next launch with
+    'Failed to create ProcessSingleton'. Safe to delete unconditionally
+    before a fresh launch — they are regenerated on startup.
+    """
+    for lock_name in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
+        lock_file = session_dir / lock_name
+        try:
+            lock_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def _open_context(p: Any, headless: bool = False) -> BrowserContext:
     """Launch a persistent Chromium context backed by ~/.classroom-session."""
     SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    _clear_singleton_lock(SESSION_DIR)
     ctx: BrowserContext = p.chromium.launch_persistent_context(
         str(SESSION_DIR), headless=headless
     )
