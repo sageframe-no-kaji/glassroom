@@ -1,6 +1,8 @@
 """Flask application factory for Glassroom."""
 
-from flask import Flask
+from __future__ import annotations
+
+from flask import Flask, Response, send_from_directory
 
 from src.db import get_engine, init_db
 
@@ -20,6 +22,16 @@ def create_app() -> Flask:
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(setup_bp)
+
+    # Serve downloaded PDFs from the downloads/ folder
+    from src.downloader import DOWNLOADS_DIR, attachment_type
+
+    @app.route("/files/<path:filename>")
+    def serve_download(filename: str) -> Response:
+        return send_from_directory(str(DOWNLOADS_DIR), filename)
+
+    # Jinja filter so templates can call {{ url | attachment_type }}
+    app.jinja_env.filters["attachment_type"] = attachment_type
 
     return app
 

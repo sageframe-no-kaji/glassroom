@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from pathlib import Path
 
 from flask import Blueprint, current_app, redirect, render_template, url_for
 
 from src.db import get_session
+from src.downloader import DOWNLOADS_DIR
 from src.models import Assignment, SelectedClass
 from src.classroom import SESSION_DIR
 
@@ -17,8 +17,6 @@ bp = Blueprint("dashboard", __name__)
 _DONE_STATUSES = frozenset({"Turned in", "Graded", "Done"})
 _URGENT_STATUSES = frozenset({"Missing"})
 _ATTENTION_STATUSES = frozenset({"Assigned"})
-
-DOWNLOADS_DIR = Path(__file__).parent.parent.parent / "data" / "downloads"
 
 
 def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
@@ -121,6 +119,8 @@ def todo() -> str:
 @bp.route("/downloads")
 def downloads() -> str:
     """List downloaded PDFs organised by class folder."""
+    from src.downloader import _load_manifest
+
     pdf_tree: dict[str, list[dict[str, str]]] = {}
 
     if DOWNLOADS_DIR.is_dir():
@@ -129,7 +129,7 @@ def downloads() -> str:
                 continue
             pdfs = sorted(
                 [
-                    {"name": f.name, "url": f"/static/downloads/{class_dir.name}/{f.name}"}
+                    {"name": f.name, "url": f"/files/{class_dir.name}/{f.name}"}
                     for f in class_dir.iterdir()
                     if f.suffix.lower() == ".pdf"
                 ],
@@ -138,4 +138,5 @@ def downloads() -> str:
             if pdfs:
                 pdf_tree[class_dir.name] = pdfs
 
-    return render_template("downloads.html", pdf_tree=pdf_tree)
+    manifest = _load_manifest(DOWNLOADS_DIR) if DOWNLOADS_DIR.is_dir() else {}
+    return render_template("downloads.html", pdf_tree=pdf_tree, manifest=manifest)

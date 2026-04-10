@@ -2,15 +2,19 @@
 {% block title %}Downloads — Glassroom{% endblock %}
 {% block content %}
 
-<h1>Downloaded PDFs</h1>
+<div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1.5rem">
+  <h1 style="margin:0">Downloaded PDFs</h1>
+  <form action="/api/download" method="post" style="display:inline">
+    <button type="submit" class="btn btn-primary btn-sm">Download attachments now</button>
+  </form>
+</div>
 
 {% if not pdf_tree %}
   <div class="empty-state">
     <p>No PDFs downloaded yet.</p>
-    <p>
-      <form action="/api/download" method="post" style="display:inline">
-        <button type="submit" class="btn btn-primary">Download attachments</button>
-      </form>
+    <p style="color:#6b7280;font-size:0.9rem">
+      Glassroom can download Google Docs, Slides, and Sheets as PDFs.
+      Forms, YouTube links, and external URLs are not downloadable.
     </p>
   </div>
 {% else %}
@@ -23,9 +27,7 @@
     <div class="card-body">
       <table>
         <thead>
-          <tr>
-            <th>File</th>
-          </tr>
+          <tr><th>File</th></tr>
         </thead>
         <tbody>
           {% for pdf in pdfs %}
@@ -37,6 +39,23 @@
       </table>
     </div>
   </div>
+  {% endfor %}
+{% endif %}
+
+{% if manifest and manifest.classes %}
+  <h2 style="margin-top:2rem;font-size:1rem;color:#6b7280">Download log</h2>
+  {% for class_slug, cls_data in manifest.classes.items() %}
+    {% set skipped_items = cls_data.files | selectattr("downloaded", "equalto", false) | list %}
+    {% if skipped_items %}
+    <div style="margin-bottom:1rem;font-size:0.85rem">
+      <strong>{{ cls_data.class_name }}</strong> — {{ skipped_items | length }} attachment{% if skipped_items | length != 1 %}s{% endif %} not downloaded:
+      <ul style="margin:0.25rem 0 0 1.2rem;color:#9ca3af">
+        {% for item in skipped_items %}
+        <li>{{ item.attachment_title or item.assignment_title }} — <em>{{ item.skip_reason or 'skipped' }}</em></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
   {% endfor %}
 {% endif %}
 

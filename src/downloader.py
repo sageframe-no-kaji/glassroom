@@ -12,11 +12,31 @@ from playwright.sync_api import sync_playwright
 
 from src.classroom import _open_context
 
-DOWNLOADS_DIR = Path("downloads")
+# Absolute so it resolves correctly regardless of CWD
+DOWNLOADS_DIR = Path(__file__).parent.parent / "downloads"
 
 _GDOC_RE = re.compile(r"docs\.google\.com/document/d/([^/?#]+)")
 _GSLIDE_RE = re.compile(r"docs\.google\.com/presentation/d/([^/?#]+)")
 _GSHEET_RE = re.compile(r"docs\.google\.com/spreadsheets/d/([^/?#]+)")
+_GFORM_RE = re.compile(r"(forms\.gle/|docs\.google\.com/forms/)")
+_GDRIVE_RE = re.compile(r"drive\.google\.com/file/d/([^/?#]+)")
+
+
+def attachment_type(url: str) -> str:
+    """Return a short human-readable type label for a given attachment URL."""
+    if _GDOC_RE.search(url):
+        return "Doc"
+    if _GSLIDE_RE.search(url):
+        return "Slides"
+    if _GSHEET_RE.search(url):
+        return "Sheet"
+    if _GFORM_RE.search(url):
+        return "Form"
+    if _GDRIVE_RE.search(url):
+        return "Drive"
+    if "youtube.com" in url or "youtu.be" in url:
+        return "Video"
+    return "Link"
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +143,12 @@ def _export_url(url: str) -> tuple[str, str] | None:
         return (
             f"https://docs.google.com/spreadsheets/d/{m.group(1)}/export?format=pdf",
             "Google Sheets",
+        )
+    m = _GDRIVE_RE.search(url)
+    if m:
+        return (
+            f"https://drive.google.com/uc?export=download&id={m.group(1)}",
+            "Drive File",
         )
     return None
 

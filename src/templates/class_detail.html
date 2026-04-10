@@ -55,7 +55,8 @@
               {% set t = titles[i].strip() %}
               {% set l = links[i].strip() if i < links | length else '' %}
               {% if t %}
-                {% if l %}<a href="{{ l }}" target="_blank" rel="noopener">{{ t }}</a>{% else %}{{ t }}{% endif %}
+                {% set atype = l | attachment_type if l else '' %}
+                <span style="font-size:0.7rem;background:#f3f4f6;color:#6b7280;border-radius:3px;padding:0 4px;margin-right:3px">{{ atype }}</span>{% if l %}<a href="{{ l }}" target="_blank" rel="noopener">{{ t }}</a>{% else %}{{ t }}{% endif %}
                 {% if not loop.last %}<br>{% endif %}
               {% endif %}
             {% endfor %}

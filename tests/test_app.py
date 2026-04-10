@@ -197,7 +197,9 @@ class TestDownloads:
         resp = client.get("/downloads")
         assert resp.status_code == 200
 
-    def test_empty_state_when_no_dir(self, client):
+    def test_empty_state_when_no_dir(self, client, tmp_path, monkeypatch):
+        import src.routes.dashboard as dash_mod
+        monkeypatch.setattr(dash_mod, "DOWNLOADS_DIR", tmp_path / "nonexistent")
         resp = client.get("/downloads")
         assert b"No PDFs downloaded" in resp.data
 
