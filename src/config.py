@@ -16,6 +16,7 @@ DATA_DIR = Path(
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 CONFIG_PATH = DATA_DIR / "config.json"
+SETTINGS_PATH = DATA_DIR / "settings.json"
 
 
 def load_config() -> dict[str, Any]:
@@ -35,6 +36,31 @@ def _default_config() -> dict[str, Any]:
     return {
         "selected_classes": [],
     }
+
+
+def _default_settings() -> dict[str, Any]:
+    return {
+        "baserow_url": "",
+        "baserow_token": "",
+        "auto_export": False,
+        "baserow_workspace_id": None,
+        "baserow_database_id": None,
+        "baserow_table_id": None,
+        "baserow_field_ids": None,
+    }
+
+
+def load_settings() -> dict[str, Any]:
+    if not SETTINGS_PATH.exists():
+        return _default_settings()
+    with SETTINGS_PATH.open() as f:
+        return cast(dict[str, Any], json.load(f))
+
+
+def save_settings(settings: dict[str, Any]) -> None:
+    with SETTINGS_PATH.open("w") as f:
+        json.dump(settings, f, indent=2)
+        f.write("\n")
 
 
 def get_env(key: str, required: bool = True) -> str:

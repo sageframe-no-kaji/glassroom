@@ -409,8 +409,12 @@ class TestGetToken:
 @pytest.fixture()
 def client_with_session(client):
     """Client fixture with a mocked requests.Session attached."""
+    from src.baserow_client import BASE_URL, HOST
     mock_session = MagicMock()
     client.session = mock_session
+    client._base_url = BASE_URL
+    client._host = HOST
+    client._direct_token = False
     return client
 
 
@@ -510,9 +514,13 @@ class TestInit:
 
 class TestAuthWithCredentials:
     def _make_client(self) -> BaserowClient:
+        from src.baserow_client import BASE_URL, HOST
         with patch.object(BaserowClient, "__init__", lambda self: None):
             c = BaserowClient.__new__(BaserowClient)
         c.session = MagicMock()
+        c._base_url = BASE_URL
+        c._host = HOST
+        c._direct_token = False
         return c
 
     def test_exits_when_no_credentials(self):

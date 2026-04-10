@@ -13,7 +13,7 @@
   <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Dashboard</a>
   <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}>To Do</a>
   <a href="/downloads" {% if request.path == '/downloads' %}class="active"{% endif %}>Downloads</a>
-  <a href="/setup" {% if request.path == '/setup' %}class="active"{% endif %}>Setup</a>
+  <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}>Settings</a>
   <span class="spacer"></span>
   <span id="scrape-status" style="font-size:0.8rem;color:#888"></span>
   <a href="/api/export/csv" class="btn btn-secondary btn-sm">Export CSV</a>

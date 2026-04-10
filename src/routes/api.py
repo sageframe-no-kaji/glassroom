@@ -425,6 +425,183 @@ def reset_data() -> Response:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/baserow/settings  — return current Baserow settings (token masked)
+# POST /api/baserow/settings — save url, token, auto_export
+# ---------------------------------------------------------------------------
+
+_EXPORT_FIELDS = [
+    "assignment_url", "class_name", "week_label", "title", "description",
+    "teacher", "posted_date", "due_date", "points_possible", "category",
+    "assignment_type", "status", "turn_in_required", "grade",
+    "attachment_links", "attachment_titles", "scraped_at",
+    "first_seen_at", "last_modified_at", "notes", "class_priority",
+]
+
+
+@bp.route("/baserow/settings", methods=["GET"])
+def get_baserow_settings() -> Response:
+    from src.config import load_settings
+
+    s = load_settings()
+    return jsonify({
+        "baserow_url": s.get("baserow_url", ""),
+        "has_token": bool(s.get("baserow_token")),
+        "auto_export": bool(s.get("auto_export")),
+        "is_configured": bool(s.get("baserow_table_id")),
+        "baserow_table_id": s.get("baserow_table_id"),
+    })
+
+
+@bp.route("/baserow/settings", methods=["POST"])
+def save_baserow_settings() -> Response:
+    from src.config import load_settings, save_settings
+
+    data = request.get_json(silent=True) or {}
+    s = load_settings()
+
+    if "baserow_url" in data:
+        s["baserow_url"] = str(data["baserow_url"]).strip()
+    if "baserow_token" in data:
+        new_token = str(data["baserow_token"]).strip()
+        if new_token:
+            s["baserow_token"] = new_token
+    if "auto_export" in data:
+        s["auto_export"] = bool(data["auto_export"])
+
+    save_settings(s)
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# POST /api/baserow/test — verify connection by hitting /api/workspaces/
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/baserow/test", methods=["POST"])
+def test_baserow_connection() -> Response:
+    from src.config import load_settings
+    from src.baserow_client import BaserowClient
+    import requests as _requests
+
+    s = load_settings()
+    url = s.get("baserow_url", "").strip()
+    token = s.get("baserow_token", "").strip()
+
+    if not url or not token:
+        return jsonify({"ok": False, "error": "URL and token are required"}), 400  # type: ignore[return-value]
+
+    try:
+        client = BaserowClient(base_url=url, token=token)
+        workspaces = client._request("GET", "/api/workspaces/").json()
+        return jsonify({
+            "ok": True,
+            "workspaces": [{"id": w["id"], "name": w["name"]} for w in workspaces],
+        })
+    except _requests.HTTPError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400  # type: ignore[return-value]
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500  # type: ignore[return-value]
+
+
+# ---------------------------------------------------------------------------
+# POST /api/baserow/setup — create workspace/db/table/fields, store IDs
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/baserow/setup", methods=["POST"])
+def setup_baserow() -> Response:
+    from src.config import load_settings, save_settings
+    from src.baserow_client import BaserowClient
+    import requests as _requests
+
+    s = load_settings()
+    url = s.get("baserow_url", "").strip()
+    token = s.get("baserow_token", "").strip()
+
+    if not url or not token:
+        return jsonify({"ok": False, "error": "URL and token are required"}), 400  # type: ignore[return-value]
+
+    try:
+        client = BaserowClient(base_url=url, token=token)
+        # Pass current IDs so setup() is idempotent when re-run
+        config: dict[str, Any] = {
+            "baserow_workspace_id": s.get("baserow_workspace_id"),
+            "baserow_database_id": s.get("baserow_database_id"),
+            "baserow_table_id": s.get("baserow_table_id"),
+            "baserow_field_ids": s.get("baserow_field_ids"),
+        }
+        updated_config = client.setup(config, non_interactive=True)
+        # Persist the IDs back into settings.json
+        s["baserow_workspace_id"] = updated_config.get("baserow_workspace_id")
+        s["baserow_database_id"] = updated_config.get("baserow_database_id")
+        s["baserow_table_id"] = updated_config.get("baserow_table_id")
+        s["baserow_field_ids"] = updated_config.get("baserow_field_ids")
+        save_settings(s)
+        return jsonify({"ok": True, "table_id": s["baserow_table_id"]})
+    except _requests.HTTPError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400  # type: ignore[return-value]
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500  # type: ignore[return-value]
+
+
+# ---------------------------------------------------------------------------
+# POST /api/baserow/export — upsert all SQLite assignments to Baserow
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/baserow/export", methods=["POST"])
+def export_to_baserow() -> Response:
+    from src.config import load_settings
+    from src.baserow_client import BaserowClient
+    import requests as _requests
+
+    s = load_settings()
+    url = s.get("baserow_url", "").strip()
+    token = s.get("baserow_token", "").strip()
+    table_id = s.get("baserow_table_id")
+    field_ids = s.get("baserow_field_ids")
+
+    if not url or not token:
+        return jsonify({"ok": False, "error": "URL and token are required"}), 400  # type: ignore[return-value]
+    if not table_id or not field_ids:
+        return jsonify({  # type: ignore[return-value]
+            "ok": False,
+            "error": "Baserow not configured — run Setup first",
+        }), 400
+
+    engine = current_app.config["DB_ENGINE"]
+    with get_session(engine) as session:
+        assignments = session.query(Assignment).all()
+        rows = [
+            {f: getattr(a, f, None) for f in _EXPORT_FIELDS}
+            for a in assignments
+        ]
+
+    try:
+        client = BaserowClient(base_url=url, token=token)
+        inserted = updated = skipped = 0
+        for row in rows:
+            outcome = client.upsert(row, table_id=table_id, field_ids=field_ids)
+            if outcome == "inserted":
+                inserted += 1
+            elif outcome == "updated":
+                updated += 1
+            else:
+                skipped += 1
+        return jsonify({
+            "ok": True,
+            "inserted": inserted,
+            "updated": updated,
+            "skipped": skipped,
+            "total": len(rows),
+        })
+    except _requests.HTTPError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400  # type: ignore[return-value]
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500  # type: ignore[return-value]
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

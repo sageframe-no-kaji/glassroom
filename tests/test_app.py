@@ -41,6 +41,7 @@ def _make_app(engine):
     from src.routes.dashboard import bp as dashboard_bp
     from src.routes.api import bp as api_bp
     from src.routes.setup import bp as setup_bp
+    from src.routes.settings import bp as settings_bp
 
     template_dir = str(_PROJECT_ROOT / "src" / "templates")
     static_dir = str(_PROJECT_ROOT / "src" / "static")
@@ -49,6 +50,7 @@ def _make_app(engine):
     a.register_blueprint(dashboard_bp)
     a.register_blueprint(api_bp)
     a.register_blueprint(setup_bp)
+    a.register_blueprint(settings_bp)
     return a
 
 

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Glassroom — Settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+
+<section class="setup-card" style="max-width:680px">
+  <h2>Baserow Export <span style="font-size:0.75rem;font-weight:400;color:var(--text-muted)">(optional)</span></h2>
+  <p style="color:var(--text-muted);margin-bottom:1.25rem">
+    Export your assignments to a Baserow database for advanced filtering, sharing, and AI analysis.
+    Glassroom works without this — it's an optional sync target.
+  </p>
+
+  <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem">
+    <label style="display:flex;flex-direction:column;gap:0.25rem;font-size:0.9rem;font-weight:500">
+      Baserow URL
+      <input
+        id="input-url"
+        type="url"
+        placeholder="http://localhost:8888"
+        value="{{ settings.baserow_url or '' }}"
+        style="padding:0.45rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;font-family:inherit"
+      >
+    </label>
+
+    <label style="display:flex;flex-direction:column;gap:0.25rem;font-size:0.9rem;font-weight:500">
+      API Token
+      <input
+        id="input-token"
+        type="password"
+        placeholder="{% if has_token %}••••••••••••••••{% else %}Paste your Baserow API token{% endif %}"
+        style="padding:0.45rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;font-family:inherit"
+      >
+      <span style="font-size:0.78rem;color:var(--text-muted);font-weight:400">
+        Create one in Baserow → Settings → API tokens. Leave blank to keep existing.
+      </span>
+    </label>
+  </div>
+
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem">
+    <button class="btn btn-secondary" onclick="saveSettings()">Save</button>
+    <button class="btn btn-secondary" onclick="testConnection()">Test connection</button>
+  </div>
+
+  <p id="conn-status" style="display:none;font-size:0.88rem;margin-bottom:1rem"></p>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
+
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem">
+    <button class="btn btn-secondary" onclick="setupBaserow()" {% if not has_token %}disabled title="Save a token first"{% endif %}>
+      Setup Baserow
+    </button>
+    <span style="font-size:0.82rem;color:var(--text-muted)">
+      {% if is_configured %}
+        ✓ Configured (table ID {{ settings.baserow_table_id }})
+      {% else %}
+        Creates the workspace, database, table, and fields.
+      {% endif %}
+    </span>
+  </div>
+  <p id="setup-status" style="display:none;font-size:0.88rem;margin-bottom:1rem"></p>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
+
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.5rem">
+    <button class="btn btn-primary" id="btn-export" onclick="exportBaserow()" {% if not is_configured %}disabled title="Run Setup first"{% endif %}>
+      Export to Baserow
+    </button>
+    <span style="font-size:0.82rem;color:var(--text-muted)">Pushes all assignments. Safe to re-run.</span>
+  </div>
+
+  <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.88rem;cursor:pointer;margin-bottom:0.75rem">
+    <input type="checkbox" id="chk-auto-export" {% if settings.auto_export %}checked{% endif %} onchange="saveAutoExport()">
+    Auto-export after each scrape
+  </label>
+
+  <p id="export-status" style="display:none;font-size:0.88rem"></p>
+</section>
+
+<section class="setup-card" style="max-width:680px;margin-top:1.5rem">
+  <h2>Setup</h2>
+  <p style="color:var(--text-muted)">Re-run the first-time setup flow to log in, change selected classes, or re-scrape.</p>
+  <a href="/setup" class="btn btn-secondary">Go to Setup →</a>
+</section>
+
+<script>
+function saveSettings() {
+  const url = document.getElementById('input-url').value.trim();
+  const token = document.getElementById('input-token').value.trim();
+  const body = { baserow_url: url };
+  if (token) body.baserow_token = token;
+
+  fetch('/api/baserow/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('conn-status');
+      el.style.display = 'block';
+      if (data.ok) {
+        el.style.color = 'var(--status-done)';
+        el.textContent = '✓ Settings saved.';
+      } else {
+        el.style.color = 'var(--status-missing)';
+        el.textContent = '✗ ' + (data.error || 'Save failed');
+      }
+    })
+    .catch(err => {
+      const el = document.getElementById('conn-status');
+      el.style.display = 'block';
+      el.style.color = 'var(--status-missing)';
+      el.textContent = '✗ ' + String(err);
+    });
+}
+
+function testConnection() {
+  const statusEl = document.getElementById('conn-status');
+  statusEl.style.display = 'block';
+  statusEl.style.color = 'var(--text-muted)';
+  statusEl.textContent = 'Testing…';
+
+  // Save current values first, then test
+  const url = document.getElementById('input-url').value.trim();
+  const token = document.getElementById('input-token').value.trim();
+  const saveBody = { baserow_url: url };
+  if (token) saveBody.baserow_token = token;
+
+  fetch('/api/baserow/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(saveBody),
+  })
+    .then(() => fetch('/api/baserow/test', { method: 'POST' }))
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        const names = (data.workspaces || []).map(w => w.name).join(', ');
+        statusEl.style.color = 'var(--status-done)';
+        statusEl.textContent = '✓ Connected. Workspaces: ' + (names || '(none)');
+      } else {
+        statusEl.style.color = 'var(--status-missing)';
+        statusEl.textContent = '✗ ' + (data.error || 'Connection failed');
+      }
+    })
+    .catch(err => {
+      statusEl.style.color = 'var(--status-missing)';
+      statusEl.textContent = '✗ ' + String(err);
+    });
+}
+
+function setupBaserow() {
+  const el = document.getElementById('setup-status');
+  el.style.display = 'block';
+  el.style.color = 'var(--text-muted)';
+  el.textContent = 'Running setup…';
+
+  fetch('/api/baserow/setup', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        el.style.color = 'var(--status-done)';
+        el.textContent = '✓ Setup complete. Table ID: ' + data.table_id;
+        document.getElementById('btn-export').disabled = false;
+      } else {
+        el.style.color = 'var(--status-missing)';
+        el.textContent = '✗ ' + (data.error || 'Setup failed');
+      }
+    })
+    .catch(err => {
+      el.style.color = 'var(--status-missing)';
+      el.textContent = '✗ ' + String(err);
+    });
+}
+
+function exportBaserow() {
+  const el = document.getElementById('export-status');
+  const btn = document.getElementById('btn-export');
+  el.style.display = 'block';
+  el.style.color = 'var(--text-muted)';
+  el.textContent = 'Exporting…';
+  btn.disabled = true;
+
+  fetch('/api/baserow/export', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      if (data.ok) {
+        el.style.color = 'var(--status-done)';
+        el.textContent = `✓ Done — ${data.inserted} inserted, ${data.updated} updated, ${data.skipped} skipped (${data.total} total)`;
+      } else {
+        el.style.color = 'var(--status-missing)';
+        el.textContent = '✗ ' + (data.error || 'Export failed');
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      el.style.color = 'var(--status-missing)';
+      el.textContent = '✗ ' + String(err);
+    });
+}
+
+function saveAutoExport() {
+  const checked = document.getElementById('chk-auto-export').checked;
+  fetch('/api/baserow/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ auto_export: checked }),
+  });
+}
+</script>
+{% endblock %}

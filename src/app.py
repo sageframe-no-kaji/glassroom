@@ -18,10 +18,12 @@ def create_app() -> Flask:
     from src.routes.dashboard import bp as dashboard_bp
     from src.routes.api import bp as api_bp
     from src.routes.setup import bp as setup_bp
+    from src.routes.settings import bp as settings_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(setup_bp)
+    app.register_blueprint(settings_bp)
 
     # Serve downloaded PDFs from the downloads/ folder
     from src.downloader import DOWNLOADS_DIR, attachment_type

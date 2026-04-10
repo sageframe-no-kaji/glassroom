@@ -208,10 +208,28 @@ def _extract_comparable(value: Any) -> Any:
 
 
 class BaserowClient:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        base_url: str | None = None,
+        token: str | None = None,
+    ) -> None:
+        from urllib.parse import urlparse
+
+        self._base_url = (base_url or BASE_URL).rstrip("/")
+        self._host = urlparse(self._base_url).netloc if base_url else HOST
+        # When a token is passed directly (web UI), skip the .env credential path
+        # and don't attempt a JWT refresh on 401 (direct tokens don't rotate).
+        self._direct_token = token is not None
         self.session = requests.Session()
-        self.session.headers.update({"Host": HOST, "Content-Type": "application/json"})
-        self._set_token(self._get_token())
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if not base_url:
+            # Legacy CLI path: set the Host override for the user's reverse proxy.
+            headers["Host"] = HOST
+        self.session.headers.update(headers)
+        if token:
+            self._set_token(token)
+        else:
+            self._set_token(self._get_token())
 
     def _set_token(self, token: str) -> None:
         self.token = token
@@ -231,8 +249,8 @@ class BaserowClient:
 
         try:
             resp = requests.post(
-                f"{BASE_URL}/api/user/token-auth/",
-                headers={"Host": HOST, "Content-Type": "application/json"},
+                f"{self._base_url}/api/user/token-auth/",
+                headers={"Host": self._host, "Content-Type": "application/json"},
                 json={"email": email, "password": password},
             )
             resp.raise_for_status()
@@ -243,7 +261,7 @@ class BaserowClient:
             )
             sys.exit(1)
         except requests.RequestException as exc:
-            print(f"Could not reach Baserow at {BASE_URL}: {exc}")
+            print(f"Could not reach Baserow at {self._base_url}: {exc}")
             sys.exit(1)
 
         token: str = resp.json()["token"]
@@ -259,13 +277,19 @@ class BaserowClient:
         return self._auth_with_credentials()
 
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
-        resp = self.session.request(method, f"{BASE_URL}{path}", **kwargs)
+        resp = self.session.request(method, f"{self._base_url}{path}", **kwargs)
         if resp.status_code in (401, 403):
+            if self._direct_token:
+                # Direct API tokens don't support JWT refresh; fail immediately.
+                raise requests.HTTPError(
+                    f"{resp.status_code} {resp.reason} — token rejected",
+                    response=resp,
+                )
             # JWT access tokens expire in ~10 minutes. Try a fresh auth once before
             # giving up — this handles the common case of a stale cached token.
             print("Token rejected; re-authenticating...")
             self._set_token(self._auth_with_credentials())
-            resp = self.session.request(method, f"{BASE_URL}{path}", **kwargs)
+            resp = self.session.request(method, f"{self._base_url}{path}", **kwargs)
             if resp.status_code in (401, 403):
                 print("Authentication failed. Check BASEROW_EMAIL and BASEROW_PASSWORD in .env.")
                 sys.exit(1)
@@ -276,8 +300,14 @@ class BaserowClient:
             )
         return resp
 
-    def setup(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Create workspace database, table, and all fields. Idempotent — safe to re-run."""
+    def setup(
+        self, config: dict[str, Any], non_interactive: bool = False
+    ) -> dict[str, Any]:
+        """Create workspace database, table, and all fields. Idempotent — safe to re-run.
+
+        When non_interactive=True, auto-select the first available workspace instead
+        of prompting via input().  Used by the web UI export flow.
+        """
         from src.config import save_config
 
         # 1. Workspace
@@ -286,7 +316,7 @@ class BaserowClient:
             if not workspaces:
                 print("No workspaces found in Baserow.")
                 sys.exit(1)
-            if len(workspaces) == 1:
+            if len(workspaces) == 1 or non_interactive:
                 workspace = workspaces[0]
             else:
                 print("Multiple workspaces found:")
