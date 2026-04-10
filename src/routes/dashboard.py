@@ -25,11 +25,21 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
     done = sum(1 for a in assignments if a.status in _DONE_STATUSES)
     missing = sum(1 for a in assignments if a.status in _URGENT_STATUSES)
     needs_attention = sum(1 for a in assignments if a.status in _ATTENTION_STATUSES)
+    graded = sum(1 for a in assignments if a.status == "Graded")
+    pct_due = round(100 * sum(1 for a in assignments if a.due_date) / total) if total else 0
+    pct_attach = (
+        round(100 * sum(1 for a in assignments if a.attachment_links) / total)
+        if total
+        else 0
+    )
     return {
         "total": total,
         "done": done,
         "missing": missing,
         "needs_attention": needs_attention,
+        "graded": graded,
+        "pct_due": pct_due,
+        "pct_attach": pct_attach,
     }
 
 

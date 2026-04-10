@@ -110,3 +110,13 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
 });
+
+// ---- Stat-card click: scroll to class section ----
+
+function scrollToClass(encodedName) {
+  var el = document.getElementById(encodedName);
+  if (el) {
+    el.open = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}

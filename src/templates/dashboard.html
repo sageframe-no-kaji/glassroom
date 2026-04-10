@@ -13,8 +13,25 @@
     <p>Run a scrape to get started, or <a href="/setup">open setup</a> if this is your first time.</p>
   </div>
 {% else %}
+  <div class="stats-row">
+    {% for cls in classes %}
+    <div class="stat-card{% if cls.stats.pct_due == 0 and cls.stats.graded == 0 %} stat-card-warn{% endif %}"
+         onclick="scrollToClass('{{ cls.name | urlencode }}')"
+         title="Jump to {{ cls.name }}">
+      <div class="stat-card-name" title="{{ cls.name }}">{{ cls.name.split(' - ')[0] }}</div>
+      <div class="stat-card-numbers">
+        <div class="stat-card-item"><span class="stat-card-val">{{ cls.stats.total }}</span><span class="stat-card-label"> items</span></div>
+        <div class="stat-card-item {% if cls.stats.pct_due == 0 %}stat-zero{% endif %}"><span class="stat-card-val">{{ cls.stats.pct_due }}%</span><span class="stat-card-label"> due</span></div>
+        <div class="stat-card-item {% if cls.stats.pct_attach == 0 %}stat-zero{% endif %}"><span class="stat-card-val">{{ cls.stats.pct_attach }}%</span><span class="stat-card-label"> attach</span></div>
+        <div class="stat-card-item {% if cls.stats.graded == 0 %}stat-zero{% endif %}"><span class="stat-card-val">{{ cls.stats.graded }}</span><span class="stat-card-label"> graded</span></div>
+        <div class="stat-card-item {% if cls.stats.missing > 0 %}stat-missing{% endif %}"><span class="stat-card-val">{{ cls.stats.missing }}</span><span class="stat-card-label"> missing</span></div>
+        <div class="stat-card-item"><span class="stat-card-val">{{ cls.stats.needs_attention }}</span><span class="stat-card-label"> to do</span></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
   {% for cls in classes %}
-  <details open>
+  <details open id="{{ cls.name | urlencode }}">
     <summary>
       <div class="card-header">
         <span class="chevron">▶</span>
