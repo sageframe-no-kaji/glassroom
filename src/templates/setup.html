@@ -102,6 +102,8 @@
   // -----------------------------------------------------------------------
   // Step 1 — Login
   // -----------------------------------------------------------------------
+  let _vncWin = null;  // module-scope handle so pollLogin can close it
+
   function startLogin() {
     const btn = document.getElementById('btn-login');
     btn.disabled = true;
@@ -109,7 +111,7 @@
 
     // Open the VNC browser synchronously on the user gesture so popup
     // blockers don't interfere. If the API call subsequently fails we close it.
-    const vncWin = window.open(
+    _vncWin = window.open(
       'http://localhost:6080/vnc_auto.html?autoconnect=true&resize=scale&reconnect=true',
       '_blank'
     );
@@ -118,7 +120,7 @@
       .then(r => r.json())
       .then(data => {
         if (data.error) {
-          if (vncWin) vncWin.close();
+          if (_vncWin) { _vncWin.close(); _vncWin = null; }
           showLoginError(data.error);
           return;
         }
@@ -127,7 +129,7 @@
         pollLogin();
       })
       .catch(err => {
-        if (vncWin) vncWin.close();
+        if (_vncWin) { _vncWin.close(); _vncWin = null; }
         showLoginError(String(err));
       });
   }
@@ -138,6 +140,7 @@
         .then(r => r.json())
         .then(data => {
           if (data.status === 'done') {
+            if (_vncWin) { _vncWin.close(); _vncWin = null; }
             document.getElementById('login-detecting-banner').style.display = 'none';
             document.getElementById('login-success-banner').style.display = 'block';
             setTimeout(() => {
