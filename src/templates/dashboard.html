@@ -2,9 +2,9 @@
 {% block title %}Dashboard — Glassroom{% endblock %}
 {% block content %}
 
-<div style="display:flex; align-items:baseline; gap:1rem; margin-bottom:1rem;">
-  <h1 style="margin:0">Dashboard</h1>
-  <a href="/api/export/csv" class="btn btn-secondary btn-sm">Export all CSV</a>
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <a href="/api/export/csv" class="btn btn-secondary btn-sm no-print">Export all CSV</a>
 </div>
 
 {% if not classes %}
@@ -47,7 +47,7 @@
             {% for a in cls.assignments %}
             <tr>
               <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
-              <td style="white-space:nowrap">{{ a.due_date or '—' }}</td>
+              <td class="nowrap">{{ a.due_date or '—' }}</td>
               <td>{% include "partials/status_badge.html" %}</td>
               <td>{{ a.points_possible or '—' }}</td>
               <td>{{ a.grade or '—' }}</td>

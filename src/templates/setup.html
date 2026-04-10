@@ -2,7 +2,7 @@
 {% block title %}Glassroom — Setup{% endblock %}
 {% block content %}
 <h1>Welcome to Glassroom</h1>
-<p style="color:#555;margin-bottom:1.5rem">Let's get you set up. This takes about 2 minutes.</p>
+<p class="text-muted" style="margin-bottom:1.5rem">Let's get you set up. This takes about 2 minutes.</p>
 
 <!-- Step indicators -->
 <div id="steps-nav" style="display:flex;gap:0.5rem;margin-bottom:2rem;flex-wrap:wrap">
@@ -64,26 +64,6 @@
   <p id="done-msg"></p>
   <a href="/" class="btn btn-primary">Go to Dashboard →</a>
 </div>
-
-<style>
-  .setup-card { background:#fff; border:1px solid #e0e0e0; border-radius:6px; padding:1.5rem; max-width:640px; margin-bottom:1.5rem; }
-  .setup-card h2 { margin:0 0 0.6rem; font-size:1.1rem; }
-  .setup-card p  { margin:0 0 0.75rem; color:#555; }
-  .step-dot { padding:0.3rem 0.8rem; border-radius:999px; font-size:0.8rem; font-weight:600; background:#f3f4f6; color:#9ca3af; }
-  .step-dot.active { background:#dbeafe; color:#1e40af; }
-  .step-dot.done   { background:#dcfce7; color:#166534; }
-  .class-option { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0; border-bottom:1px solid #f3f4f6; }
-  .class-option:last-child { border-bottom:none; }
-  .class-option label { cursor:pointer; font-size:0.95rem; }
-  .spinner { display:inline-block; width:14px; height:14px; border:2px solid #bfdbfe; border-top-color:#2563eb; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:0.4rem; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  progress { appearance:none; -webkit-appearance:none; border-radius:4px; background:#e5e7eb; }
-  progress::-webkit-progress-bar { background:#e5e7eb; border-radius:4px; }
-  progress::-webkit-progress-value { background:#2563eb; border-radius:4px; transition:width 0.3s; }
-  progress::-moz-progress-bar { background:#2563eb; border-radius:4px; }
-  .btn-danger { background:#dc2626; color:#fff; border-color:#dc2626; }
-  .btn-danger:hover { background:#b91c1c; border-color:#b91c1c; }
-</style>
 
 <script>
   // -----------------------------------------------------------------------

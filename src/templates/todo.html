@@ -2,11 +2,11 @@
 {% block title %}To Do — Glassroom{% endblock %}
 {% block content %}
 
-<div style="display:flex; align-items:baseline; gap:1rem; margin-bottom:1rem;">
-  <h1 style="margin:0">To Do</h1>
-  <span style="font-size:0.85rem; color:#666">Turn-in required, not yet submitted</span>
-  <div style="flex:1"></div>
-  <a href="/api/export/csv?view=todo" class="btn btn-secondary btn-sm">Export CSV</a>
+<div class="page-header">
+  <h1>To Do</h1>
+  <span class="page-sub">Turn-in required, not yet submitted</span>
+  <span class="spacer"></span>
+  <a href="/api/export/csv?view=todo" class="btn btn-secondary btn-sm no-print">Export CSV</a>
 </div>
 
 {% if not classes %}
@@ -16,11 +16,11 @@
 {% else %}
   {% for cls in classes %}
   <div class="card" style="margin-bottom:1rem;">
-    <div class="card-header" style="cursor:default">
+    <div class="card-header card-header-static">
       <h2>{{ cls.name }}</h2>
-      <span style="font-size:0.82rem; color:#888; margin-left:0.5rem">{{ cls.assignments | length }} remaining</span>
+      <span class="text-muted text-sm">{{ cls.assignments | length }} remaining</span>
       <span class="spacer"></span>
-      <a href="/api/export/csv?view=todo&class={{ cls.name | urlencode }}" class="btn btn-secondary btn-sm">Export</a>
+      <a href="/api/export/csv?view=todo&class={{ cls.name | urlencode }}" class="btn btn-secondary btn-sm no-print">Export</a>
     </div>
     <div class="card-body">
       <table>
@@ -38,8 +38,8 @@
           {% for a in cls.assignments %}
           <tr>
             <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
-            <td style="white-space:nowrap; font-size:0.8rem; color:#666">{{ a.category or '—' }}</td>
-            <td style="white-space:nowrap">{{ a.due_date or '—' }}</td>
+            <td class="nowrap text-muted text-sm">{{ a.category or '—' }}</td>
+            <td class="nowrap">{{ a.due_date or '—' }}</td>
             <td>{% include "partials/status_badge.html" %}</td>
             <td>{{ a.points_possible or '—' }}</td>
             <td>{{ a.grade or '—' }}</td>

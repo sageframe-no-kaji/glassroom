@@ -2,15 +2,15 @@
 {% block title %}{{ class_name }} — Glassroom{% endblock %}
 {% block content %}
 
-<div style="display:flex; align-items:baseline; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
-  <h1 style="margin:0">{{ class_name }}</h1>
+<div class="page-header">
+  <h1>{{ class_name }}</h1>
   <div class="stats">
     <span class="stat"><span class="stat-val">{{ stats.total }}</span> total</span>
     <span class="stat stat-missing"><span class="stat-val">{{ stats.missing }}</span> missing</span>
     <span class="stat stat-attention"><span class="stat-val">{{ stats.needs_attention }}</span> to do</span>
     <span class="stat"><span class="stat-val">{{ stats.done }}</span> done</span>
   </div>
-  <div style="flex:1"></div>
+  <span class="spacer"></span>
   <a href="/api/export/csv?class={{ class_name | urlencode }}" class="btn btn-secondary btn-sm">Export CSV</a>
   <a href="/" class="btn btn-secondary btn-sm">← Dashboard</a>
 </div>
@@ -38,11 +38,11 @@
         <td>
           <a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a>
           {% if a.description %}
-          <div style="font-size:0.78rem; color:#666; margin-top:0.2rem">{{ a.description[:120] }}{% if a.description|length > 120 %}…{% endif %}</div>
+          <div class="assignment-desc">{{ a.description[:120] }}{% if a.description|length > 120 %}…{% endif %}</div>
           {% endif %}
         </td>
-        <td style="white-space:nowrap; font-size:0.8rem; color:#666">{{ a.category or '—' }}</td>
-        <td style="white-space:nowrap">{{ a.due_date or '—' }}</td>
+        <td class="nowrap text-muted text-sm">{{ a.category or '—' }}</td>
+        <td class="nowrap">{{ a.due_date or '—' }}</td>
         <td>{% include "partials/status_badge.html" %}</td>
         <td>{{ a.points_possible or '—' }}</td>
         <td>{{ a.grade or '—' }}</td>
@@ -55,8 +55,7 @@
               {% set t = titles[i].strip() %}
               {% set l = links[i].strip() if i < links | length else '' %}
               {% if t %}
-                {% set atype = l | attachment_type if l else '' %}
-                <span style="font-size:0.7rem;background:#f3f4f6;color:#6b7280;border-radius:3px;padding:0 4px;margin-right:3px">{{ atype }}</span>{% if l %}<a href="{{ l }}" target="_blank" rel="noopener">{{ t }}</a>{% else %}{{ t }}{% endif %}
+                <span class="attach-type">{{ l | attachment_type if l else '' }}</span>{% if l %}<a href="{{ l }}" target="_blank" rel="noopener">{{ t }}</a>{% else %}{{ t }}{% endif %}
                 {% if not loop.last %}<br>{% endif %}
               {% endif %}
             {% endfor %}
@@ -89,32 +88,5 @@
   <div class="empty-state">No assignments for this class.</div>
   {% endif %}
 </div>
-
-<script>
-function patchAssignment(id, data) {
-  fetch('/api/assignment/' + id, {
-    method: 'PATCH',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(data)
-  });
-}
-
-document.querySelectorAll('.notes-field').forEach(function(el) {
-  var timer;
-  el.addEventListener('input', function() {
-    clearTimeout(timer);
-    timer = setTimeout(function() {
-      patchAssignment(el.dataset.id, {notes: el.value});
-    }, 600);
-  });
-});
-
-document.querySelectorAll('.priority-field').forEach(function(el) {
-  el.addEventListener('change', function() {
-    var val = el.value === '' ? null : parseInt(el.value, 10);
-    patchAssignment(el.dataset.id, {class_priority: val});
-  });
-});
-</script>
 
 {% endblock %}

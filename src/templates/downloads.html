@@ -2,9 +2,9 @@
 {% block title %}Downloads — Glassroom{% endblock %}
 {% block content %}
 
-<div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1.5rem">
-  <h1 style="margin:0">Downloaded PDFs</h1>
-  <form action="/api/download" method="post" style="display:inline">
+<div class="page-header">
+  <h1>Downloaded PDFs</h1>
+  <form action="/api/download" method="post" class="no-print" style="display:inline">
     <button type="submit" class="btn btn-primary btn-sm">Download attachments now</button>
   </form>
 </div>
@@ -20,9 +20,9 @@
 {% else %}
   {% for class_slug, pdfs in pdf_tree.items() %}
   <div class="card" style="margin-bottom:1rem;">
-    <div class="card-header" style="cursor:default">
+    <div class="card-header card-header-static">
       <h2>{{ class_slug }}</h2>
-      <span style="font-size:0.82rem; color:#888; margin-left:0.5rem">{{ pdfs | length }} file{% if pdfs | length != 1 %}s{% endif %}</span>
+      <span class="text-muted text-sm">{{ pdfs | length }} file{% if pdfs | length != 1 %}s{% endif %}</span>
     </div>
     <div class="card-body">
       <table>
@@ -43,13 +43,13 @@
 {% endif %}
 
 {% if manifest and manifest.classes %}
-  <h2 style="margin-top:2rem;font-size:1rem;color:#6b7280">Download log</h2>
+  <h2 class="download-log-heading">Download log</h2>
   {% for class_slug, cls_data in manifest.classes.items() %}
     {% set skipped_items = cls_data.files | selectattr("downloaded", "equalto", false) | list %}
     {% if skipped_items %}
-    <div style="margin-bottom:1rem;font-size:0.85rem">
+    <div class="download-log-class">
       <strong>{{ cls_data.class_name }}</strong> — {{ skipped_items | length }} attachment{% if skipped_items | length != 1 %}s{% endif %} not downloaded:
-      <ul style="margin:0.25rem 0 0 1.2rem;color:#9ca3af">
+      <ul>
         {% for item in skipped_items %}
         <li>{{ item.attachment_title or item.assignment_title }} — <em>{{ item.skip_reason or 'skipped' }}</em></li>
         {% endfor %}

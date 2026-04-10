@@ -163,6 +163,7 @@ def trigger_scrape() -> Response:
                 "inserted": inserted,
                 "updated": updated,
                 "skipped": skipped,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
             }
 
             # Trigger download if requested
