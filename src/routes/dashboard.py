@@ -46,23 +46,36 @@ def dashboard() -> str:
         if not has_classes:
             return redirect(url_for("setup.setup"))  # type: ignore[return-value]
         assignments = session.query(Assignment).order_by(Assignment.class_name).all()
+        # Build lookup: class_name → archived flag
+        selected_classes = session.query(SelectedClass).all()
 
     # Session validity — quick file-system check, no Playwright overhead
     session_valid = SESSION_DIR.exists() and any(SESSION_DIR.iterdir())
+
+    # Map class name → archived flag
+    archived_names: set[str] = {sc.name for sc in selected_classes if sc.archived}
 
     # Group by class and sort within each class
     by_class: dict[str, list[Assignment]] = defaultdict(list)
     for a in assignments:
         by_class[str(a.class_name or "Unknown")].append(a)
 
-    classes = []
+    active_classes = []
+    archived_classes = []
     for class_name in sorted(by_class.keys()):
         rows = sorted(by_class[class_name], key=_sort_key)
-        classes.append({
+        entry = {
             "name": class_name,
             "assignments": rows,
             "stats": _class_stats(rows),
-        })
+            "archived": class_name in archived_names,
+        }
+        if class_name in archived_names:
+            archived_classes.append(entry)
+        else:
+            active_classes.append(entry)
+
+    classes = active_classes + archived_classes
 
     return render_template("dashboard.html", classes=classes, session_valid=session_valid)
 

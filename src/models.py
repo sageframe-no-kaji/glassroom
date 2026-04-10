@@ -48,6 +48,7 @@ class SelectedClass(Base):
     name = Column(String, nullable=False)
     course_url = Column(String, nullable=False)
     active = Column(Boolean, default=True)
+    archived = Column(Boolean, default=False)
 
 
 class ScrapeLog(Base):

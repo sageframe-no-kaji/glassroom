@@ -349,3 +349,149 @@ class TestReset:
 
         assert resp.status_code == 200
         assert not dl_dir.exists()
+
+
+# ---------------------------------------------------------------------------
+# _infer_school_year helper
+# ---------------------------------------------------------------------------
+
+
+class TestInferSchoolYear:
+    def _call(self, name: str) -> str:
+        from src.classroom import _infer_school_year
+        return _infer_school_year(name)
+
+    def test_two_consecutive_years(self):
+        assert self._call("ELA 2024-2025") == "2024-2025"
+
+    def test_two_years_not_adjacent_uses_pair(self):
+        assert self._call("Science 2023 2024") == "2023-2024"
+
+    def test_single_year_produces_range(self):
+        result = self._call("Math 2024")
+        assert result == "2024-2025"
+
+    def test_no_year_returns_other(self):
+        assert self._call("AP Biology Honors") == "Other"
+
+    def test_parens_year(self):
+        result = self._call("US History (2023)")
+        assert result == "2023-2024"
+
+
+# ---------------------------------------------------------------------------
+# POST /api/classes/discover-archived  &  GET /api/classes/discover-archived/status
+# ---------------------------------------------------------------------------
+
+
+class TestDiscoverArchived:
+    def test_starts_discovery_returns_ok(self, client):
+        import src.routes.api as api_mod
+
+        with api_mod._archived_lock:
+            api_mod._archived_state["status"] = "idle"
+
+        with patch("src.classroom.discover_archived_classes", return_value=[]):
+            resp = client.post("/api/classes/discover-archived")
+
+        assert resp.status_code == 200
+        assert resp.get_json()["ok"] is True
+
+    def test_conflict_when_already_running(self, client):
+        import src.routes.api as api_mod
+
+        with api_mod._archived_lock:
+            api_mod._archived_state["status"] = "running"
+        try:
+            resp = client.post("/api/classes/discover-archived")
+            assert resp.status_code == 409
+        finally:
+            with api_mod._archived_lock:
+                api_mod._archived_state["status"] = "idle"
+
+    def test_status_returns_json(self, client):
+        resp = client.get("/api/classes/discover-archived/status")
+        assert resp.status_code == 200
+        assert resp.is_json
+
+    def test_status_reflects_state(self, client):
+        import src.routes.api as api_mod
+
+        with api_mod._archived_lock:
+            api_mod._archived_state["status"] = "done"
+            api_mod._archived_state["classes"] = [
+                {"name": "Old Class", "course_url": "https://classroom.google.com/c/old", "school_year": "2023-2024"}
+            ]
+
+        resp = client.get("/api/classes/discover-archived/status")
+        data = resp.get_json()
+        assert data["status"] == "done"
+        assert len(data["classes"]) == 1
+
+    def test_discovery_transitions_to_done(self, client):
+        import time
+        import src.routes.api as api_mod
+
+        with api_mod._archived_lock:
+            api_mod._archived_state["status"] = "idle"
+            api_mod._archived_state["classes"] = []
+
+        archived = [{"name": "Old Math", "course_url": "https://classroom.google.com/c/om", "school_year": "2023-2024"}]
+        with patch("src.classroom.discover_archived_classes", return_value=archived):
+            client.post("/api/classes/discover-archived")
+            for _ in range(20):
+                time.sleep(0.1)
+                with api_mod._archived_lock:
+                    if api_mod._archived_state["status"] != "running":
+                        break
+
+        with api_mod._archived_lock:
+            assert api_mod._archived_state["status"] == "done"
+            assert len(api_mod._archived_state["classes"]) == 1
+
+    def test_reset_clears_archived_state(self, client):
+        import src.routes.api as api_mod
+
+        with api_mod._archived_lock:
+            api_mod._archived_state["status"] = "done"
+            api_mod._archived_state["classes"] = [{"name": "Old", "course_url": "x", "school_year": "2023-2024"}]
+
+        client.post("/api/reset")
+
+        with api_mod._archived_lock:
+            assert api_mod._archived_state["status"] == "idle"
+            assert api_mod._archived_state["classes"] == []
+
+
+# ---------------------------------------------------------------------------
+# POST /api/classes/save — archived flag
+# ---------------------------------------------------------------------------
+
+
+class TestClassesSaveArchived:
+    def test_save_persists_archived_flag(self, client, engine):
+        payload = {
+            "classes": [
+                {"name": "Active Math", "course_url": "https://classroom.google.com/c/1"},
+                {"name": "Old Science", "course_url": "https://classroom.google.com/c/2", "archived": True},
+            ]
+        }
+        resp = client.post("/api/classes/save", json=payload)
+        assert resp.status_code == 200
+
+        with get_session(engine) as s:
+            rows = {r.name: r for r in s.query(SelectedClass).all()}
+        assert rows["Active Math"].archived is False
+        assert rows["Old Science"].archived is True
+
+    def test_save_without_archived_defaults_false(self, client, engine):
+        payload = {
+            "classes": [
+                {"name": "English", "course_url": "https://classroom.google.com/c/eng"},
+            ]
+        }
+        client.post("/api/classes/save", json=payload)
+        with get_session(engine) as s:
+            row = s.query(SelectedClass).filter_by(name="English").first()
+        assert row is not None
+        assert row.archived is False

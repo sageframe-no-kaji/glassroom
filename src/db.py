@@ -142,9 +142,22 @@ def get_engine(db_path: Path | None = None) -> Engine:
 
 
 def init_db(engine: Engine | None = None) -> Engine:
-    """Create all tables. Safe to call repeatedly — uses CREATE IF NOT EXISTS."""
+    """Create all tables. Safe to call repeatedly — uses CREATE IF NOT EXISTS.
+
+    Also applies additive migrations for any columns added after initial
+    schema creation (e.g., archived on selected_classes).
+    """
     eng = engine if engine is not None else get_engine()
     Base.metadata.create_all(eng)
+    # Additive migration: add archived column to selected_classes if missing.
+    # SQLite does not support IF NOT EXISTS for ALTER TABLE ADD COLUMN before
+    # version 3.37, so we check the column list explicitly.
+    with eng.connect() as conn:
+        from sqlalchemy import text
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(selected_classes)"))}
+        if "archived" not in cols:
+            conn.execute(text("ALTER TABLE selected_classes ADD COLUMN archived BOOLEAN DEFAULT 0"))
+            conn.commit()
     return eng
 
 

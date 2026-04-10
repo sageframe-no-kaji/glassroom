@@ -34,7 +34,18 @@
 
   <div id="class-list" style="margin-bottom:1rem"></div>
 
-  <p id="class-msg" style="display:none;color:#dc2626;margin-bottom:0.5rem"></p>
+  <div id="archived-section" style="margin-top:1.25rem;border-top:1px solid var(--border);padding-top:1rem">
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.9rem">
+      <input type="checkbox" id="chk-include-archived" onchange="toggleArchivedSection(this)">
+      <span>Include archived classes <span style="color:var(--text-muted);font-size:0.82rem">(Full History)</span></span>
+    </label>
+    <div id="archived-classes-wrap" style="display:none;margin-top:0.75rem">
+      <p id="archived-status-msg" style="font-size:0.85rem;color:#555;margin:0 0 0.5rem"></p>
+      <div id="archived-class-groups"></div>
+    </div>
+  </div>
+
+  <p id="class-msg" style="display:none;color:#dc2626;margin-bottom:0.5rem;margin-top:1rem"></p>
   <button id="btn-save-classes" class="btn btn-primary" onclick="saveClasses()" disabled>Save &amp; continue</button>
 
   {% if has_classes %}
@@ -227,7 +238,16 @@
       return cb && cb.checked;
     });
 
-    if (selected.length === 0) {
+    // Also collect any checked archived classes
+    const archivedClasses = window._archivedClasses || [];
+    const selectedArchived = archivedClasses.filter((_, i) => {
+      const cb = document.getElementById('arch-' + i);
+      return cb && cb.checked;
+    }).map(c => Object.assign({}, c, { archived: true }));
+
+    const allSelected = selected.concat(selectedArchived);
+
+    if (allSelected.length === 0) {
       msg.style.display = 'block';
       msg.textContent = 'Select at least one class.';
       return;
@@ -239,7 +259,7 @@
     fetch('/api/classes/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ classes: selected }),
+      body: JSON.stringify({ classes: allSelected }),
     })
       .then(r => r.json())
       .then(data => {
@@ -260,6 +280,106 @@
         btn.disabled = false;
         btn.textContent = 'Save & continue';
       });
+  }
+
+  // -----------------------------------------------------------------------
+  // Archived class discovery
+  // -----------------------------------------------------------------------
+  let _archivedLoaded = false;
+
+  function toggleArchivedSection(chk) {
+    const wrap = document.getElementById('archived-classes-wrap');
+    if (chk.checked) {
+      wrap.style.display = 'block';
+      if (!_archivedLoaded) {
+        _startArchivedDiscovery();
+      }
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+
+  function _startArchivedDiscovery() {
+    const msg = document.getElementById('archived-status-msg');
+    msg.style.color = '#555';
+    msg.innerHTML = '<span class="spinner"></span> Discovering archived classes…';
+    document.getElementById('archived-class-groups').innerHTML = '';
+
+    fetch('/api/classes/discover-archived', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          msg.style.color = '#dc2626';
+          msg.textContent = '⚠ ' + data.error;
+          return;
+        }
+        _pollArchivedDiscovery();
+      })
+      .catch(err => {
+        msg.style.color = '#dc2626';
+        msg.textContent = '⚠ ' + String(err);
+      });
+  }
+
+  function _pollArchivedDiscovery() {
+    setTimeout(() => {
+      fetch('/api/classes/discover-archived/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'done') {
+            _archivedLoaded = true;
+            const classes = data.classes || [];
+            _renderArchivedGroups(classes);
+          } else if (data.status === 'failed') {
+            const msg = document.getElementById('archived-status-msg');
+            msg.style.color = '#dc2626';
+            msg.textContent = '⚠ ' + (data.error || 'Discovery failed');
+          } else {
+            _pollArchivedDiscovery();
+          }
+        })
+        .catch(() => _pollArchivedDiscovery());
+    }, 2000);
+  }
+
+  function _renderArchivedGroups(classes) {
+    const msg = document.getElementById('archived-status-msg');
+    const container = document.getElementById('archived-class-groups');
+    window._archivedClasses = classes;
+
+    if (classes.length === 0) {
+      msg.style.color = '#9ca3af';
+      msg.textContent = 'No archived classes found.';
+      container.innerHTML = '';
+      return;
+    }
+
+    msg.textContent = '';
+
+    // Group by school_year, sorted most recent first
+    const groups = {};
+    classes.forEach(c => {
+      const yr = c.school_year || 'Other';
+      if (!groups[yr]) groups[yr] = [];
+      groups[yr].push(c);
+    });
+    const sortedYears = Object.keys(groups).sort((a, b) => {
+      // "Other" always last. Otherwise sort by first year descending.
+      if (a === 'Other') return 1;
+      if (b === 'Other') return -1;
+      return b.localeCompare(a);
+    });
+
+    let html = '';
+    sortedYears.forEach(yr => {
+      html += '<div style="margin-bottom:0.75rem"><div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.35rem">' + escHtml(yr) + '</div>';
+      groups[yr].forEach(cls => {
+        const i = classes.indexOf(cls);
+        html += '<div class="class-option"><input type="checkbox" id="arch-' + i + '"><label for="arch-' + i + '">' + escHtml(cls.name) + '</label></div>';
+      });
+      html += '</div>';
+    });
+    container.innerHTML = html;
   }
 
   // -----------------------------------------------------------------------

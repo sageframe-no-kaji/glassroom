@@ -162,8 +162,90 @@ def discover_classes() -> list[dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# select-classes
+# discover_archived_classes — web helper (no InquirerPy, no sys.exit)
 # ---------------------------------------------------------------------------
+
+# School year patterns to parse from class names.
+# Matches "2024-2025", "2024-25", "24-25", standalone "2024", "(2024)"
+_YEAR_RE = re.compile(r"\b(20\d{2})\b")
+
+
+def _infer_school_year(name: str) -> str:
+    """Infer a 'YYYY-YYYY' school year label from a class name string.
+
+    Looks for 4-digit years embedded in the name. If two sequential years are
+    found (e.g. 2024 and 2025), returns "2024-2025". If one is found, returns
+    "YYYY-YYYY+1". Falls back to "Other" when no year is present.
+    """
+    years = [int(m) for m in _YEAR_RE.findall(name)]
+    years = sorted(set(years))
+    if len(years) >= 2 and years[-1] - years[0] <= 2:
+        return f"{years[0]}-{years[-1]}"
+    if len(years) == 1:
+        return f"{years[0]}-{years[0] + 1}"
+    return "Other"
+
+
+def discover_archived_classes() -> list[dict[str, str]]:
+    """Return archived classes as a list of {name, course_url, school_year} dicts.
+
+    Navigates to the Classroom hamburger drawer and clicks "Archived classes".
+    Requires a valid Playwright session. Returns empty list on failure.
+    Does NOT call sys.exit — safe to call from a background thread.
+    """
+    with sync_playwright() as p:
+        ctx = _open_context(p, headless=True)
+        page = ctx.new_page()
+        page.goto(CLASSROOM_HOME, wait_until="domcontentloaded")
+        if "accounts.google.com" in page.url:
+            ctx.close()
+            return []
+
+        # Open the navigation drawer via the hamburger button.
+        # Google Classroom's nav drawer button is aria-label="Main menu".
+        try:
+            page.click("button[aria-label='Main menu']", timeout=10_000)
+        except Exception:
+            # Fallback: try the menu icon by data-testid or jsname
+            try:
+                page.click("[data-testid='main-menu'], [jsname='rymPhb']", timeout=5_000)
+            except Exception:
+                ctx.close()
+                return []
+
+        # Click "Archived classes" in the drawer.
+        try:
+            page.click("text=Archived classes", timeout=10_000)
+            page.wait_for_selector("a[href*='/c/']", timeout=20_000)
+        except Exception:
+            ctx.close()
+            return []
+
+        classes: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for link in page.query_selector_all("a[href*='/c/']"):
+            href = link.get_attribute("href") or ""
+            if not re.search(r"/c/[^/]+/?$", href):
+                continue
+            url = (
+                f"https://classroom.google.com{href}"
+                if href.startswith("/")
+                else href
+            )
+            if url in seen:
+                continue
+            seen.add(url)
+            lines = [ln.strip() for ln in link.inner_text().split("\n") if ln.strip()]
+            name = lines[1] if len(lines) >= 2 else (lines[0] if lines else "")
+            if name:
+                classes.append({
+                    "name": name,
+                    "course_url": url,
+                    "school_year": _infer_school_year(name),
+                })
+
+        ctx.close()
+    return classes
 
 
 def do_select_classes(config: dict[str, Any]) -> None:

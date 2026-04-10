@@ -18,7 +18,7 @@
     <summary>
       <div class="card-header">
         <span class="chevron">▶</span>
-        <h2>{{ cls.name }}</h2>
+        <h2>{{ cls.name }}{% if cls.archived %} <span class="archived-badge">Archived</span>{% endif %}</h2>
         <div class="stats">
           <span class="stat"><span class="stat-val">{{ cls.stats.total }}</span> total</span>
           <span class="stat stat-missing"><span class="stat-val">{{ cls.stats.missing }}</span> missing</span>

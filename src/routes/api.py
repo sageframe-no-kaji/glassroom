@@ -34,6 +34,9 @@ _scrape_state: dict[str, Any] = {
 _login_lock = threading.Lock()
 _login_state: dict[str, Any] = {"status": "idle", "classes": [], "error": None}
 
+_archived_lock = threading.Lock()
+_archived_state: dict[str, Any] = {"status": "idle", "classes": [], "error": None}
+
 _DONE_STATUSES = frozenset({"Turned in", "Graded", "Done"})
 _URGENT_STATUSES = frozenset({"Missing"})
 _ATTENTION_STATUSES = frozenset({"Assigned"})
@@ -358,6 +361,45 @@ def classes_available() -> Response:
 
 
 # ---------------------------------------------------------------------------
+# POST /api/classes/discover-archived — discover archived classes in background
+# GET  /api/classes/discover-archived/status — poll for progress/results
+# ---------------------------------------------------------------------------
+
+
+@bp.route("/classes/discover-archived", methods=["POST"])
+def discover_archived() -> Response:
+    with _archived_lock:
+        if _archived_state["status"] == "running":
+            return jsonify({"error": "Discovery already in progress"}), 409  # type: ignore[return-value]
+        _archived_state["status"] = "running"
+        _archived_state["error"] = None
+        _archived_state["classes"] = []
+
+    def _run() -> None:
+        from src.classroom import discover_archived_classes
+
+        try:
+            classes = discover_archived_classes()
+            with _archived_lock:
+                _archived_state["classes"] = classes
+                _archived_state["status"] = "done"
+        except Exception as exc:
+            with _archived_lock:
+                _archived_state["status"] = "failed"
+                _archived_state["error"] = str(exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok": True, "message": "Archived class discovery started"})
+
+
+@bp.route("/classes/discover-archived/status")
+def discover_archived_status() -> Response:
+    with _archived_lock:
+        state = dict(_archived_state)
+    return jsonify(state)
+
+
+# ---------------------------------------------------------------------------
 # POST /api/classes/save — persist selected classes to SelectedClass table
 # ---------------------------------------------------------------------------
 
@@ -378,6 +420,7 @@ def save_classes() -> Response:
                 name=c["name"],
                 course_url=c["course_url"],
                 active=True,
+                archived=bool(c.get("archived", False)),
             ))
 
     return jsonify({"ok": True, "saved": len(classes)})
@@ -414,6 +457,11 @@ def reset_data() -> Response:
         _login_state["status"] = "idle"
         _login_state["classes"] = []
         _login_state["error"] = None
+
+    with _archived_lock:
+        _archived_state["status"] = "idle"
+        _archived_state["classes"] = []
+        _archived_state["error"] = None
 
     # Remove downloaded PDFs if present
     from src.downloader import DOWNLOADS_DIR as _DOWNLOADS_DIR
