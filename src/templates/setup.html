@@ -15,9 +15,31 @@
 <!-- Step 1: Login -->
 <div id="step-1" class="setup-card active">
   <h2>Step 1 — Log in to Google Classroom</h2>
-  <p>We'll open a browser window. Sign in to your Google account that has access to Google Classroom. Once logged in, we'll detect it automatically (usually within a few seconds).</p>
-  <p id="login-msg" style="display:none"></p>
-  <button id="btn-login" class="btn btn-primary" onclick="startLogin()">Open browser &amp; log in</button>
+
+  <div id="login-pre-click">
+    <p>Click the button below. A Google login window will appear right here on this page — sign in with the account that has access to Google Classroom. Once you're on the Classroom homepage, we'll continue automatically.</p>
+    <p id="login-msg" style="display:none"></p>
+    <button id="btn-login" class="btn btn-primary" onclick="startLogin()">Open login browser</button>
+  </div>
+
+  <div id="login-browser-wrap" style="display:none;margin-top:0.5rem">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:0.75rem 1rem;margin-bottom:0.75rem">
+      <p style="margin:0;font-size:0.9rem"><strong>Sign in to Google in the window below.</strong> Use the account that has access to Google Classroom. Once you reach the Classroom homepage, we'll detect it and move to the next step automatically.</p>
+    </div>
+    <div id="login-detecting-banner" style="display:none;padding:0.6rem 0.75rem;border-radius:4px;margin-bottom:0.5rem;font-size:0.875rem;background:#fef3c7;border:1px solid #fde68a;color:#92400e">
+      <span class="spinner"></span> Waiting for you to complete login…
+    </div>
+    <div id="login-success-banner" style="display:none;padding:0.6rem 0.75rem;border-radius:4px;margin-bottom:0.5rem;font-size:0.875rem;background:#dcfce7;border:1px solid #86efac;color:#166534">
+      ✓ Logged in! Loading your classes…
+    </div>
+    <iframe
+      id="novnc-frame"
+      src="http://localhost:6080/vnc_auto.html?autoconnect=true&resize=scale&reconnect=true"
+      style="width:100%;height:580px;border:1px solid var(--border);border-radius:4px;background:#111;display:block"
+      allow="clipboard-read; clipboard-write"
+    ></iframe>
+    <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem">This is a browser running inside Glassroom. Your login session stays on your computer and is never sent anywhere.</p>
+  </div>
 </div>
 
 <!-- Step 2: Select classes -->
@@ -88,17 +110,17 @@
   // -----------------------------------------------------------------------
   function startLogin() {
     const btn = document.getElementById('btn-login');
-    const msg = document.getElementById('login-msg');
     btn.disabled = true;
-    btn.textContent = 'Opening browser…';
-    msg.style.display = 'block';
-    msg.style.color = '#555';
-    msg.innerHTML = '<span class="spinner"></span> Waiting for you to log in…';
+    btn.textContent = 'Opening…';
 
     fetch('/api/login', { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         if (data.error) { showLoginError(data.error); return; }
+        // Swap pre-click area for the embedded browser
+        document.getElementById('login-pre-click').style.display = 'none';
+        document.getElementById('login-browser-wrap').style.display = 'block';
+        document.getElementById('login-detecting-banner').style.display = 'block';
         pollLogin();
       })
       .catch(err => showLoginError(String(err)));
@@ -110,8 +132,13 @@
         .then(r => r.json())
         .then(data => {
           if (data.status === 'done') {
-            completeStep(1);
-            showStep2(data.classes || []);
+            document.getElementById('login-detecting-banner').style.display = 'none';
+            document.getElementById('login-success-banner').style.display = 'block';
+            // Brief pause so user sees success state before moving on
+            setTimeout(() => {
+              completeStep(1);
+              showStep2(data.classes || []);
+            }, 1200);
           } else if (data.status === 'failed') {
             showLoginError(data.error || 'Login failed');
           } else {
@@ -122,12 +149,15 @@
     }, 2000);
   }
 
-  function showLoginError(msg) {
+  function showLoginError(errMsg) {
     const el = document.getElementById('login-msg');
     const btn = document.getElementById('btn-login');
+    // Return to pre-click state so user can retry
+    document.getElementById('login-pre-click').style.display = 'block';
+    document.getElementById('login-browser-wrap').style.display = 'none';
     el.style.display = 'block';
     el.style.color = '#dc2626';
-    el.textContent = '⚠ ' + msg;
+    el.textContent = '⚠ ' + errMsg;
     btn.disabled = false;
     btn.textContent = 'Retry';
   }
