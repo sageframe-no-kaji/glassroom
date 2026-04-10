@@ -1,0 +1,603 @@
+/* Glassroom Landing Page — style.css */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --blue: #2D6CB4;
+  --blue-light: #4A90D9;
+  --blue-dark: #1e4d84;
+  --text: #1a1a2e;
+  --text-secondary: #4a4a5a;
+  --text-muted: #7a7a8a;
+  --bg: #ffffff;
+  --bg-alt: #f7f7f5;
+  --bg-dark: #1a1a2e;
+  --border: #e4e4e8;
+  --green: #3DAA6D;
+  --amber: #E8A838;
+  --red: #D94452;
+  --radius: 8px;
+  --max-width: 1040px;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ── */
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+section {
+  padding: 5rem 0;
+}
+
+section.alt {
+  background: var(--bg-alt);
+}
+
+section.dark {
+  background: var(--bg-dark);
+  color: #fff;
+}
+
+/* ── Nav ── */
+
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.9rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-brand {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.25rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-links a:hover {
+  color: var(--text);
+}
+
+/* ── Buttons ── */
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--blue-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.btn-outline:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Hero ── */
+
+#hero {
+  background: var(--bg-dark);
+  color: #fff;
+  padding: 7rem 0 6rem;
+  text-align: center;
+}
+
+#hero .eyebrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue-light);
+  margin-bottom: 1.25rem;
+}
+
+#hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  max-width: 760px;
+  margin: 0 auto 1.5rem;
+}
+
+#hero h1 em {
+  font-style: normal;
+  color: var(--blue-light);
+}
+
+#hero .subhead {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 540px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.55;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── Dashboard mockup ── */
+
+#mockup {
+  background: var(--bg-alt);
+  padding: 3rem 0 4rem;
+}
+
+.mockup-frame {
+  max-width: 860px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.1);
+}
+
+.mockup-bar {
+  background: var(--bg-dark);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mockup-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+}
+
+.mockup-url {
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  height: 22px;
+  margin: 0 0.75rem;
+}
+
+.mockup-body {
+  padding: 1.5rem;
+}
+
+.mockup-nav-bar {
+  background: var(--bg-dark);
+  border-radius: 6px;
+  height: 36px;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1rem;
+}
+
+.mockup-nav-pill {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.15);
+}
+
+.mockup-class-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.mockup-class-header {
+  background: var(--bg-alt);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mockup-class-name {
+  width: 120px;
+  height: 10px;
+  border-radius: 5px;
+  background: #ccc;
+}
+
+.mockup-badge {
+  height: 20px;
+  width: 48px;
+  border-radius: 10px;
+}
+
+.mockup-row {
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--border);
+  gap: 0.75rem;
+}
+
+.mockup-title {
+  flex: 1;
+  height: 9px;
+  border-radius: 4px;
+  background: #ddd;
+}
+
+.mockup-meta {
+  width: 60px;
+  height: 9px;
+  border-radius: 4px;
+  background: #e8e8e8;
+}
+
+.mockup-status {
+  width: 70px;
+  height: 20px;
+  border-radius: 10px;
+}
+
+/* Status badge colors */
+.badge-red    { background: #fde8ea; }
+.badge-amber  { background: #fdf3e0; }
+.badge-green  { background: #e0f5ec; }
+.badge-blue   { background: #e0eefa; }
+
+/* ── Problem section ── */
+
+#problem h2,
+#what-it-does h2,
+#who h2,
+#install h2,
+#open-source h2 {
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+#problem .section-subhead,
+#what-it-does .section-subhead,
+#who .section-subhead {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 560px;
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.problem-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.problem-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.75rem;
+  line-height: 1;
+}
+
+.problem-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.problem-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ── What it does ── */
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.feature-card {
+  padding: 1.5rem;
+}
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.feature-card p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ── Who it's for ── */
+
+.who-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.who-card {
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.who-card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.who-card p {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ── Install ── */
+
+#install {
+  background: var(--bg-dark);
+  color: #fff;
+}
+
+#install h2 {
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+
+#install .section-subhead {
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 2.75rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.install-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.install-step {
+  position: relative;
+}
+
+.step-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--blue-light);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+}
+
+.install-step h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: #fff;
+}
+
+.install-step p {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.55;
+}
+
+.install-step a {
+  color: var(--blue-light);
+}
+
+.terminal-block {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  max-width: 560px;
+}
+
+.terminal-block pre {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.terminal-block pre .prompt {
+  color: var(--blue-light);
+  user-select: none;
+}
+
+.terminal-block pre .comment {
+  color: rgba(255,255,255,0.35);
+}
+
+/* ── Open source ── */
+
+#open-source {
+  text-align: center;
+}
+
+#open-source h2 {
+  margin-bottom: 1rem;
+}
+
+#open-source p {
+  color: var(--text-secondary);
+  max-width: 520px;
+  margin: 0 auto 2rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.oss-badges {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.oss-badge {
+  display: inline-block;
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+/* ── Footer ── */
+
+footer {
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+}
+
+footer p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+footer a {
+  color: var(--text-secondary);
+}
+
+/* ── Mobile ── */
+
+@media (max-width: 640px) {
+  section {
+    padding: 3.5rem 0;
+  }
+
+  #hero {
+    padding: 4.5rem 0 4rem;
+  }
+
+  nav {
+    padding: 0.75rem 1.25rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .container {
+    padding: 0 1.25rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .install-steps {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 400px) {
+  .install-steps {
+    grid-template-columns: 1fr;
+  }
+}

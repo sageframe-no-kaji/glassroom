@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glassroom — See what's really happening in your kid's Google Classroom</title>
+  <meta name="description" content="One dashboard for every class. Every assignment. Every missing piece. Glassroom makes Google Classroom transparent for parents.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav>
+  <a href="#" class="nav-brand">Glassroom</a>
+  <div class="nav-links">
+    <a href="#problem">The problem</a>
+    <a href="#what-it-does">What it does</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/sageframe-no-kaji/glassroom">GitHub</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section id="hero">
+  <div class="container">
+    <p class="eyebrow">Free &amp; open source</p>
+    <h1>See what's <em>really</em> happening in your kid's Google Classroom.</h1>
+    <p class="subhead">
+      One dashboard for every class. Every assignment. Every missing piece.
+      No API access required — works with any school.
+    </p>
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/sageframe-no-kaji/glassroom" class="btn btn-outline">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Dashboard mockup ── -->
+<section id="mockup" style="padding: 2.5rem 0 3.5rem">
+  <div class="container">
+    <div class="mockup-frame">
+      <div class="mockup-bar">
+        <div class="mockup-dot"></div>
+        <div class="mockup-dot"></div>
+        <div class="mockup-dot"></div>
+        <div class="mockup-url"></div>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-nav-bar">
+          <div class="mockup-nav-pill" style="width:80px"></div>
+          <div class="mockup-nav-pill" style="width:55px"></div>
+          <div class="mockup-nav-pill" style="width:70px"></div>
+          <div class="mockup-nav-pill" style="width:55px"></div>
+        </div>
+
+        <!-- Class 1: ELA -->
+        <div class="mockup-class-block">
+          <div class="mockup-class-header">
+            <div class="mockup-class-name"></div>
+            <div class="mockup-badge badge-red" title="Missing"></div>
+            <div class="mockup-badge badge-amber" title="Assigned"></div>
+            <div class="mockup-badge badge-green" title="Done"></div>
+          </div>
+          <div class="mockup-row">
+            <div class="mockup-title" style="max-width:280px"></div>
+            <div class="mockup-meta"></div>
+            <div class="mockup-status badge-red"></div>
+          </div>
+          <div class="mockup-row">
+            <div class="mockup-title" style="max-width:220px"></div>
+            <div class="mockup-meta"></div>
+            <div class="mockup-status badge-amber"></div>
+          </div>
+          <div class="mockup-row">
+            <div class="mockup-title" style="max-width:310px"></div>
+            <div class="mockup-meta"></div>
+            <div class="mockup-status badge-green"></div>
+          </div>
+        </div>
+
+        <!-- Class 2: Math -->
+        <div class="mockup-class-block">
+          <div class="mockup-class-header">
+            <div class="mockup-class-name" style="width:90px"></div>
+            <div class="mockup-badge badge-amber" title="Assigned"></div>
+            <div class="mockup-badge badge-green" title="Done"></div>
+          </div>
+          <div class="mockup-row">
+            <div class="mockup-title" style="max-width:260px"></div>
+            <div class="mockup-meta"></div>
+            <div class="mockup-status badge-amber"></div>
+          </div>
+          <div class="mockup-row">
+            <div class="mockup-title" style="max-width:200px"></div>
+            <div class="mockup-meta"></div>
+            <div class="mockup-status badge-green"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <p style="text-align:center;font-size:0.82rem;color:#999;margin-top:0.9rem">
+      Dashboard view — all classes, all assignments, one page.
+    </p>
+  </div>
+</section>
+
+<!-- ── The Problem ── -->
+<section id="problem" class="alt">
+  <div class="container">
+    <h2>Google Classroom is designed for teachers, not parents.</h2>
+    <p class="section-subhead">
+      You can log in. You can see one class at a time. That's about it. If you need a real picture of what your kid is working on — or not working on — Classroom doesn't help you.
+    </p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon">🔍</div>
+        <h3>No overview</h3>
+        <p>You see one class at a time. To check six classes you click six times. There's no "everything in one place" — you have to carry it in your head.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">❓</div>
+        <h3>Missing vs. never assigned?</h3>
+        <p>When an assignment is blank, did your kid not submit it — or was it never assigned to them? Classroom won't tell you. You have to ask the teacher.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">📋</div>
+        <h3>IEP accommodations aren't visible</h3>
+        <p>Your kid's IEP requires certain accommodations. Whether those modifications actually appear in assigned work — extended time, reduced load, modified content — isn't tracked anywhere.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">📉</div>
+        <h3>No history when grades drop</h3>
+        <p>By the time you see a bad grade, the assignments behind it are buried. There's no way to go back and see what happened week by week without digging through every class manually.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── What it does ── -->
+<section id="what-it-does">
+  <div class="container">
+    <h2>What Glassroom does.</h2>
+    <p class="section-subhead">
+      Glassroom runs on your computer and scrapes your kid's Google Classroom assignments into a local database. No API access. No third-party servers. Just you and the data.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>One dashboard, all classes</h3>
+        <p>Every assignment from every class in a single scrollable view. Color-coded by status so you can see the whole picture at a glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✅</div>
+        <h3>Status that actually means something</h3>
+        <p>Missing, Assigned, Turned in, Graded — shown clearly with color badges. The "To Do" view is filtered to exactly what needs action right now.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3>Downloads all attachments</h3>
+        <p>Every PDF, document, and slide deck attached to an assignment is automatically downloaded and saved. Evidence that work was or wasn't provided.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📤</div>
+        <h3>Exports to CSV &amp; Baserow</h3>
+        <p>Export everything to a CSV for your records, or push to a Baserow database for advanced filtering, sharing, or handing to an advocate.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Runs locally, stays private</h3>
+        <p>Glassroom runs on your own computer. Your kid's data never leaves your machine. Nothing is sent to any server.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <h3>Re-runs as often as you want</h3>
+        <p>Run a scrape every day or every week. Glassroom tracks what changed — new assignments, updated statuses, new grades.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Who it's for ── -->
+<section id="who" class="alt">
+  <div class="container">
+    <h2>Who it's for.</h2>
+    <p class="section-subhead">
+      Glassroom was built by a parent who needed it. These are the parents it's designed for.
+    </p>
+    <div class="who-grid">
+      <div class="who-card">
+        <h3>Parents staying on top of homework</h3>
+        <p>Your kid says everything is done. Glassroom shows you what's actually submitted, what's still assigned, and what's missing — in one view.</p>
+      </div>
+      <div class="who-card">
+        <h3>Parents of kids with IEPs</h3>
+        <p>You need to know whether the accommodations in your kid's IEP are being implemented in actual assigned work. Glassroom gives you the paper trail to verify everything that was — and wasn't — provided.</p>
+      </div>
+      <div class="who-card">
+        <h3>Parents of kids on medical leave</h3>
+        <p>When a student misses weeks of school, tracking what was assigned during that time is a full-time job. Glassroom makes it one command.</p>
+      </div>
+      <div class="who-card">
+        <h3>Special education advocates</h3>
+        <p>Gathering evidence for an IEP dispute or due process hearing requires documentation. Glassroom creates an exportable, timestamped record of what was actually assigned.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How to Install ── -->
+<section id="install" class="dark">
+  <div class="container">
+    <h2>Up and running in 4 steps.</h2>
+    <p class="section-subhead">
+      You need Docker. That's it. No Python, no terminal experience beyond copy-pasting one command.
+    </p>
+
+    <div class="install-steps">
+      <div class="install-step">
+        <div class="step-number">01</div>
+        <h3>Install Docker</h3>
+        <p>Download and install <a href="https://docker.com/get-started" target="_blank" rel="noopener">Docker Desktop</a> for Mac or Windows. It's free.</p>
+      </div>
+      <div class="install-step">
+        <div class="step-number">02</div>
+        <h3>Download Glassroom</h3>
+        <p>
+          <a href="https://github.com/sageframe-no-kaji/glassroom/archive/refs/heads/main.zip" target="_blank" rel="noopener">Download the ZIP</a> from GitHub and unzip it anywhere on your computer.
+        </p>
+      </div>
+      <div class="install-step">
+        <div class="step-number">03</div>
+        <h3>Run one command</h3>
+        <p>Open a terminal in the Glassroom folder and run:</p>
+      </div>
+      <div class="install-step">
+        <div class="step-number">04</div>
+        <h3>Open your browser</h3>
+        <p>Visit <strong style="color:#fff">localhost:3000</strong> and follow the setup steps. Log in, pick your kid's classes, scrape.</p>
+      </div>
+    </div>
+
+    <div class="terminal-block">
+      <pre><span class="comment"># In the glassroom folder:</span>
+<span class="prompt">$ </span>docker compose up
+
+<span class="comment"># Then open:</span>
+<span class="prompt">$ </span>open http://localhost:3000</pre>
+    </div>
+
+    <a href="https://github.com/sageframe-no-kaji/glassroom" class="btn btn-primary">View full instructions on GitHub →</a>
+  </div>
+</section>
+
+<!-- ── Open Source ── -->
+<section id="open-source">
+  <div class="container">
+    <h2>Open source. Free forever.</h2>
+    <p>
+      Glassroom is MIT licensed. No accounts, no subscriptions, no data leaving your machine.
+      Built by a parent who needed it — shared with every parent who needs it too.
+    </p>
+    <div class="oss-badges">
+      <span class="oss-badge">MIT License</span>
+      <span class="oss-badge">No accounts required</span>
+      <span class="oss-badge">No data collection</span>
+      <span class="oss-badge">Self-hosted</span>
+    </div>
+    <a href="https://github.com/sageframe-no-kaji/glassroom" class="btn btn-primary">View on GitHub</a>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <p>
+    Glassroom is not affiliated with Google or Google Classroom.<br>
+    <a href="https://github.com/sageframe-no-kaji/glassroom">GitHub</a> &middot;
+    MIT License &middot;
+    Built by a parent who needed it.
+  </p>
+</footer>
+
+</body>
+</html>
