@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ---- Python deps --------------------------------------------------------
 WORKDIR /app
-COPY requirements.txt .
 
 # Install runtime deps only (no dev tools like ruff/mypy/pytest in image)
 RUN pip install --no-cache-dir \
