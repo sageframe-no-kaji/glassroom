@@ -71,6 +71,7 @@
           <thead>
             <tr>
               <th>Title</th>
+              <th>Posted</th>
               <th>Due</th>
               <th>Status</th>
               <th>Points</th>
@@ -82,6 +83,7 @@
             {% for a in cls.assignments %}
             <tr>
               <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
+              <td class="nowrap">{{ a.posted_date or '—' }}</td>
               <td class="nowrap">{{ a.due_date or '—' }}</td>
               <td>{% include "partials/status_badge.html" %}</td>
               <td>{{ a.points_possible or '—' }}</td>

@@ -22,6 +22,7 @@
       <tr>
         <th>Title</th>
         <th>Category</th>
+        <th>Posted</th>
         <th>Due</th>
         <th>Status</th>
         <th>Points</th>
@@ -42,6 +43,7 @@
           {% endif %}
         </td>
         <td class="nowrap text-muted text-sm">{{ a.category or '—' }}</td>
+        <td class="nowrap">{{ a.posted_date or '—' }}</td>
         <td class="nowrap">{{ a.due_date or '—' }}</td>
         <td>{% include "partials/status_badge.html" %}</td>
         <td>{{ a.points_possible or '—' }}</td>
