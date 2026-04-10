@@ -22,23 +22,17 @@
     <button id="btn-login" class="btn btn-primary" onclick="startLogin()">Open login browser</button>
   </div>
 
-  <div id="login-browser-wrap" style="display:none;margin-top:0.5rem">
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:0.75rem 1rem;margin-bottom:0.75rem">
-      <p style="margin:0;font-size:0.9rem"><strong>Sign in to Google in the window below.</strong> Use the account that has access to Google Classroom. Once you reach the Classroom homepage, we'll detect it and move to the next step automatically.</p>
+  <div id="login-browser-wrap" style="display:none;margin-top:1rem">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:1rem 1.25rem;margin-bottom:0.75rem">
+      <p style="margin:0 0 0.5rem;font-size:0.9rem"><strong>A Google login window has opened in a new tab.</strong></p>
+      <p style="margin:0;font-size:0.9rem">Sign in with the account that has access to Google Classroom. Once you're on the Classroom homepage, come back to this tab — we'll continue automatically.</p>
     </div>
-    <div id="login-detecting-banner" style="display:none;padding:0.6rem 0.75rem;border-radius:4px;margin-bottom:0.5rem;font-size:0.875rem;background:#fef3c7;border:1px solid #fde68a;color:#92400e">
-      <span class="spinner"></span> Waiting for you to complete login…
+    <div id="login-detecting-banner" style="padding:0.75rem 1rem;border-radius:6px;background:#fef3c7;border:1px solid #fde68a;color:#92400e;font-size:0.9rem">
+      <span class="spinner"></span> Waiting for you to log in…
     </div>
-    <div id="login-success-banner" style="display:none;padding:0.6rem 0.75rem;border-radius:4px;margin-bottom:0.5rem;font-size:0.875rem;background:#dcfce7;border:1px solid #86efac;color:#166534">
+    <div id="login-success-banner" style="display:none;padding:0.75rem 1rem;border-radius:6px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-size:0.9rem">
       ✓ Logged in! Loading your classes…
     </div>
-    <iframe
-      id="novnc-frame"
-      src="http://localhost:6080/vnc_auto.html?autoconnect=true&resize=scale&reconnect=true"
-      style="width:100%;height:580px;border:1px solid var(--border);border-radius:4px;background:#111;display:block"
-      allow="clipboard-read; clipboard-write"
-    ></iframe>
-    <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem">This is a browser running inside Glassroom. Your login session stays on your computer and is never sent anywhere.</p>
   </div>
 </div>
 
@@ -113,17 +107,29 @@
     btn.disabled = true;
     btn.textContent = 'Opening…';
 
+    // Open the VNC browser synchronously on the user gesture so popup
+    // blockers don't interfere. If the API call subsequently fails we close it.
+    const vncWin = window.open(
+      'http://localhost:6080/vnc_auto.html?autoconnect=true&resize=scale&reconnect=true',
+      '_blank'
+    );
+
     fetch('/api/login', { method: 'POST' })
       .then(r => r.json())
       .then(data => {
-        if (data.error) { showLoginError(data.error); return; }
-        // Swap pre-click area for the embedded browser
+        if (data.error) {
+          if (vncWin) vncWin.close();
+          showLoginError(data.error);
+          return;
+        }
         document.getElementById('login-pre-click').style.display = 'none';
         document.getElementById('login-browser-wrap').style.display = 'block';
-        document.getElementById('login-detecting-banner').style.display = 'block';
         pollLogin();
       })
-      .catch(err => showLoginError(String(err)));
+      .catch(err => {
+        if (vncWin) vncWin.close();
+        showLoginError(String(err));
+      });
   }
 
   function pollLogin() {
@@ -134,7 +140,6 @@
           if (data.status === 'done') {
             document.getElementById('login-detecting-banner').style.display = 'none';
             document.getElementById('login-success-banner').style.display = 'block';
-            // Brief pause so user sees success state before moving on
             setTimeout(() => {
               completeStep(1);
               showStep2(data.classes || []);

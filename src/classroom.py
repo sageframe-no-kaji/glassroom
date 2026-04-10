@@ -112,17 +112,19 @@ def do_login() -> None:
     with sync_playwright() as p:
         ctx = _open_context(p, headless=False)
         page = ctx.new_page()
-        page.goto(CLASSROOM_HOME)
-        print("Complete Google login in the browser window.")
+        page.goto(CLASSROOM_HOME, wait_until="domcontentloaded")
         print("Waiting for classroom homepage (up to 5 minutes)...")
-        # Block until the URL is classroom.google.com (user completes login).
-        # Lambda predicate is more reliable than re.compile() with Playwright's
-        # wait_for_url. Networkidle is intentionally NOT used — Classroom is a
-        # SPA with constant background polling and never reaches that state.
-        page.wait_for_url(
-            lambda url: "classroom.google.com" in url,
-            timeout=300_000,
-        )
+        # wait_for_url only fires on *future* navigations, so if the saved
+        # session is still valid and goto() already landed at classroom.google.com,
+        # there is no further navigation to wait for — we'd block for 5 minutes.
+        # Check the current URL first and skip the wait when already there.
+        if "classroom.google.com" not in page.url:
+            # Networkidle is intentionally NOT used — Classroom is a SPA with
+            # constant background polling and never reaches that state.
+            page.wait_for_url(
+                lambda url: "classroom.google.com" in url,
+                timeout=300_000,
+            )
         # Brief pause so the persistent context flushes session cookies to disk
         # before we close it.
         page.wait_for_timeout(2000)
