@@ -46,7 +46,7 @@ open http://localhost:3000
 
 The first time you run it, Glassroom will walk you through a short setup:
 
-1. **Log in** — click "Open browser & log in" in the setup flow. A Chrome window will appear inside the app — open **http://localhost:6080/vnc.html** in a new browser tab and you'll see it. Sign in to your kid's school Google account. The setup page will detect it automatically.
+1. **Log in** — click "Open login browser" in the setup flow. A new tab opens with a Chrome window — sign in to your kid's school Google account. When Glassroom detects the login, the tab closes and the setup page continues automatically.
 2. **Select classes** — pick which classes to track.
 3. **Scrape** — Glassroom pulls all assignments in the background.
 4. **Done** — you're taken to the dashboard.
@@ -55,14 +55,11 @@ After the first setup, everything runs headlessly. You can trigger a new scrape 
 
 ### Logging in (more detail)
 
-Glassroom uses browser automation (Playwright) to log into Google Classroom on your behalf. It never stores your password — it saves the browser session the same way Chrome does. During the login step, it opens a real Chrome window inside the container. You interact with it via a browser-based VNC viewer:
+Glassroom uses browser automation (Playwright) to log into Google Classroom on your behalf. It never stores your password — it saves the browser session the same way Chrome does.
 
-1. Open **http://localhost:6080/vnc.html** in your browser
-2. You'll see a Chrome window
-3. Sign in to Google with your kid's school account
-4. Glassroom detects the login and closes the browser
+During setup, click **Open login browser**. A new tab opens showing a real Chrome window running inside the container. Sign in to Google with your kid's school account. When Glassroom detects that you've reached the Classroom homepage, the tab closes automatically and setup continues.
 
-You only need to do this once. The session persists across restarts.
+You only need to do this once. The session persists across container restarts.
 
 ### Data persistence
 
