@@ -98,6 +98,13 @@ nav a.active {
   display: block;
 }
 
+.nav-version {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-right: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
 .spacer { flex: 1; }
 
 #scrape-status {

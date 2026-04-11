@@ -11,6 +11,7 @@
 <body>
 <nav>
   <span class="brand"><img src="/static/glass-48.svg" alt="" class="nav-logo">Glassroom</span>
+  <span class="nav-version">v1.0.1</span>
   <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Dashboard</a>
   <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}>To Do</a>
   <a href="/downloads" {% if request.path == '/downloads' %}class="active"{% endif %}>Downloads</a>
