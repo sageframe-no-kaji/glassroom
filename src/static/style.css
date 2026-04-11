@@ -333,14 +333,32 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
-/* Colour tiers by % due dates */
-.stat-card-warn   { border-color: #FCA5A5; background: #FFF5F5; }
-.stat-card-amber  { border-color: #FCD34D; background: #FFFBEB; }
-.stat-card-green  { border-color: #6EE7B7; background: #F0FDF4; }
+/* Colour tiers by quality label */
+.stat-card-warn      { border-color: #FCA5A5; background: #FFF5F5; }
+.stat-card-amber     { border-color: #FCD34D; background: #FFFBEB; }
+.stat-card-green     { border-color: #6EE7B7; background: #F0FDF4; }
+.stat-card-dark-red  { border-color: #DC2626; background: #FEF2F2; border-left-width: 3px; }
 
-.stat-card-warn  .stat-card-name { color: #B91C1C; }
-.stat-card-amber .stat-card-name { color: #92400E; }
-.stat-card-green .stat-card-name { color: #166534; }
+.stat-card-warn     .stat-card-name { color: #B91C1C; }
+.stat-card-amber    .stat-card-name { color: #92400E; }
+.stat-card-green    .stat-card-name { color: #166534; }
+.stat-card-dark-red .stat-card-name { color: #7F1D1D; }
+
+/* Quality label badge (Structured / Partial / Minimal / Empty) */
+.quality-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+.quality-structured { color: #166534; background: #DCFCE7; }
+.quality-partial    { color: #92400E; background: #FEF9C3; }
+.quality-minimal    { color: #B91C1C; background: #FEE2E2; }
+.quality-empty      { color: #7F1D1D; background: #FECACA; }
 
 .stat-card-name {
   font-size: 0.75rem;

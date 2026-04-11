@@ -496,6 +496,110 @@ class TestExportCsv:
 
 
 # ---------------------------------------------------------------------------
+# Ho 5.3 — Summary Card Labels (_quality_label + new stats)
+# ---------------------------------------------------------------------------
+
+
+class TestQualityLabel:
+    def test_structured(self):
+        from src.routes.dashboard import _quality_label
+        assert _quality_label(pct_due=80, pct_attach=75, graded=5) == "Structured"
+
+    def test_partial_due_in_range(self):
+        from src.routes.dashboard import _quality_label
+        assert _quality_label(pct_due=40, pct_attach=10, graded=0) == "Partial"
+
+    def test_partial_some_grading(self):
+        from src.routes.dashboard import _quality_label
+        assert _quality_label(pct_due=10, pct_attach=5, graded=2) == "Partial"
+
+    def test_minimal(self):
+        from src.routes.dashboard import _quality_label
+        assert _quality_label(pct_due=10, pct_attach=10, graded=0) == "Minimal"
+
+    def test_empty(self):
+        from src.routes.dashboard import _quality_label
+        assert _quality_label(pct_due=0, pct_attach=0, graded=0) == "Empty"
+
+    def test_empty_boundary(self):
+        from src.routes.dashboard import _quality_label
+        # pct_due=4 < 5, pct_attach=9 < 10, graded=0
+        assert _quality_label(pct_due=4, pct_attach=9, graded=0) == "Empty"
+
+    def test_not_empty_if_graded(self):
+        from src.routes.dashboard import _quality_label
+        # graded > 0 means it can't be Empty even if pct_due/pct_attach are very low
+        assert _quality_label(pct_due=0, pct_attach=0, graded=1) != "Empty"
+
+    def test_stats_includes_quality_label(self):
+        from src.routes.dashboard import _class_stats
+        a = Assignment(
+            assignment_url="https://example.com/a/ql1",
+            class_name="Math",
+            title="HW",
+            status="Assigned",
+            due_date=None,
+            attachment_links=None,
+        )
+        stats = _class_stats([a])
+        assert "quality_label" in stats
+        assert stats["quality_label"] in ("Structured", "Partial", "Minimal", "Empty")
+
+    def test_stats_no_due_count(self):
+        from src.routes.dashboard import _class_stats
+        a1 = Assignment(
+            assignment_url="https://example.com/a/nd1",
+            class_name="Math", title="HW 1", status="Assigned", due_date=None,
+        )
+        a2 = Assignment(
+            assignment_url="https://example.com/a/nd2",
+            class_name="Math", title="HW 2", status="Assigned", due_date="2026-05-01",
+        )
+        stats = _class_stats([a1, a2])
+        assert stats["no_due_count"] == 1
+
+    def test_stats_never_graded(self):
+        from src.routes.dashboard import _class_stats
+        a1 = Assignment(
+            assignment_url="https://example.com/a/ng1",
+            class_name="Math", title="HW 1", status="Graded",
+        )
+        a2 = Assignment(
+            assignment_url="https://example.com/a/ng2",
+            class_name="Math", title="HW 2", status="Assigned",
+        )
+        stats = _class_stats([a1, a2])
+        assert stats["never_graded"] == 1  # 2 total - 1 graded
+
+    def test_dashboard_shows_quality_label(self, client, engine):
+        """Dashboard renders quality label badge on stat cards."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert resp.status_code == 200
+        content = resp.data.decode()
+        # One of the four labels must appear
+        assert any(label in content for label in ("Structured", "Partial", "Minimal", "Empty"))
+
+    def test_dashboard_shows_no_due_count(self, client, engine):
+        """Dashboard stat cards show 'no due date' count."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date=None)
+        resp = client.get("/")
+        assert b"no due date" in resp.data
+
+    def test_dashboard_shows_never_graded(self, client, engine):
+        """Dashboard stat cards show 'never graded' count."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert b"never graded" in resp.data
+
+
+# ---------------------------------------------------------------------------
 # Ho 5.1 — Attachment Visibility
 # ---------------------------------------------------------------------------
 

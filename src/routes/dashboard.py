@@ -20,7 +20,18 @@ _URGENT_STATUSES = frozenset({"Missing"})
 _ATTENTION_STATUSES = frozenset({"Assigned"})
 
 
-def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
+def _quality_label(pct_due: int, pct_attach: int, graded: int) -> str:
+    """Classify a class's implementation quality based on combined metrics."""
+    if pct_due < 5 and pct_attach < 10 and graded == 0:
+        return "Empty"
+    if pct_due > 60 and pct_attach > 60 and graded > 0:
+        return "Structured"
+    if pct_due < 20 and pct_attach < 20 and graded == 0:
+        return "Minimal"
+    return "Partial"
+
+
+def _class_stats(assignments: list[Assignment]) -> dict[str, int | str]:
     """Return summary counts for a list of assignments from a single class."""
     total = len(assignments)
     done = sum(1 for a in assignments if a.status in _DONE_STATUSES)
@@ -37,6 +48,8 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
         len([ln for ln in (str(a.attachment_links) if a.attachment_links else "").split("\n") if ln.strip()])
         for a in assignments
     )
+    no_due_count = sum(1 for a in assignments if not cast(Optional[str], a.due_date))
+    never_graded = total - graded
     return {
         "total": total,
         "done": done,
@@ -46,6 +59,9 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
         "pct_due": pct_due,
         "pct_attach": pct_attach,
         "attach_count": attach_count,
+        "no_due_count": no_due_count,
+        "never_graded": never_graded,
+        "quality_label": _quality_label(pct_due, pct_attach, graded),
     }
 
 

@@ -15,10 +15,11 @@
 {% else %}
   <div class="stats-row">
     {% for cls in classes %}
-    <div class="stat-card {% if cls.stats.pct_due < 20 %}stat-card-warn{% elif cls.stats.pct_due <= 60 %}stat-card-amber{% else %}stat-card-green{% endif %}"
+    <div class="stat-card {% if cls.stats.quality_label == 'Structured' %}stat-card-green{% elif cls.stats.quality_label == 'Partial' %}stat-card-amber{% elif cls.stats.quality_label == 'Empty' %}stat-card-dark-red{% else %}stat-card-warn{% endif %}"
          onclick="scrollToClass('{{ cls.name | urlencode }}')"
          title="Jump to {{ cls.name }}">
       <div class="stat-card-name" title="{{ cls.name }}">{{ cls.name.split(' - ')[0] }}</div>
+      <span class="quality-label quality-{{ cls.stats.quality_label | lower }}">{{ cls.stats.quality_label }}</span>
       <div class="stat-card-numbers">
         <div class="stat-card-item">
           <span class="stat-card-val">{{ cls.stats.total }}</span>
@@ -27,6 +28,10 @@
         <div class="stat-card-item {% if cls.stats.pct_due == 0 %}stat-zero{% endif %}">
           <span class="stat-card-val">{{ cls.stats.pct_due }}%</span>
           <span class="stat-card-lbl">due dates</span>
+        </div>
+        <div class="stat-card-item {% if cls.stats.no_due_count == 0 %}stat-zero{% elif cls.stats.no_due_count == cls.stats.total %}stat-missing{% else %}stat-todo{% endif %}">
+          <span class="stat-card-val">{{ cls.stats.no_due_count }}</span>
+          <span class="stat-card-lbl">no due date</span>
         </div>
         <div class="stat-card-item {% if cls.stats.pct_attach == 0 %}stat-zero{% endif %}">
           <span class="stat-card-val">{{ cls.stats.pct_attach }}%</span>
@@ -39,6 +44,10 @@
         <div class="stat-card-item {% if cls.stats.graded == 0 %}stat-zero{% else %}stat-done{% endif %}">
           <span class="stat-card-val">{{ cls.stats.graded }}</span>
           <span class="stat-card-lbl">graded</span>
+        </div>
+        <div class="stat-card-item {% if cls.stats.never_graded == cls.stats.total %}stat-missing{% elif cls.stats.never_graded == 0 %}stat-zero{% else %}stat-todo{% endif %}">
+          <span class="stat-card-val">{{ cls.stats.never_graded }}</span>
+          <span class="stat-card-lbl">never graded</span>
         </div>
         <div class="stat-card-item {% if cls.stats.missing > 0 %}stat-missing{% else %}stat-zero{% endif %}">
           <span class="stat-card-val">{{ cls.stats.missing }}</span>
