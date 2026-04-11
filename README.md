@@ -121,6 +121,12 @@ If your child has an IEP that requires home copies of classwork and slides, Glas
 
 ---
 
+## Built with the Ho System
+
+Glassroom was designed and built using the [Ho System](https://atmarcus.net/work/ho-system) — a structured methodology for human-AI collaborative development. [View the Ho System on GitHub →](https://github.com/sageframe-no-kaji/ho-system)
+
+---
+
 ## License
 
 MIT — built by a parent who needed it, shared with every parent who needs it too.
