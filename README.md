@@ -40,6 +40,16 @@ Glassroom fixes this. One dashboard. Every class. Every assignment.
 
 ---
 
+## Privacy
+
+Your kid's data never leaves your machine.
+
+Glassroom communicates with exactly one external service: **Google**, during the login step. That's the same network request your browser makes when you log into Google yourself. No credentials or session tokens pass through any Glassroom server — there isn't one.
+
+Everything scraped — assignments, statuses, grades, attachments — is written to a `data/` folder on your computer and goes nowhere else. Glassroom has no accounts, no telemetry, no cloud backend, and no third-party integrations.
+
+---
+
 ## Install
 
 ### Requirements
