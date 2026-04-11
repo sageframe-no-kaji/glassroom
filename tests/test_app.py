@@ -600,6 +600,82 @@ class TestQualityLabel:
 
 
 # ---------------------------------------------------------------------------
+# Ho 5.4 — No Due Date Filter View
+# ---------------------------------------------------------------------------
+
+
+class TestNoDueDateFilter:
+    def test_filter_bar_rendered(self, client, engine):
+        """Dashboard renders the four filter buttons."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert "setDashFilter" in html
+        assert "No Due Date" in html
+        assert "No Attachments" in html
+        assert "Never Graded" in html
+
+    def test_assignment_row_has_data_no_due(self, client, engine):
+        """Assignment with no due date gets data-no-due='1' on its row."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date=None)
+        resp = client.get("/")
+        assert b"data-no-due=\"1\"" in resp.data
+
+    def test_assignment_row_has_data_no_due_zero_when_due(self, client, engine):
+        """Assignment with a due date gets data-no-due='0' on its row."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date="2026-05-01")
+        resp = client.get("/")
+        assert b"data-no-due=\"0\"" in resp.data
+
+    def test_assignment_row_has_data_no_attach(self, client, engine):
+        """Assignment with no attachments gets data-no-attach='1' on its row."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, attachment_links=None)
+        resp = client.get("/")
+        assert b"data-no-attach=\"1\"" in resp.data
+
+    def test_assignment_row_has_data_ungraded(self, client, engine):
+        """Non-graded assignment gets data-ungraded='1' on its row."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, status="Assigned")
+        resp = client.get("/")
+        assert b"data-ungraded=\"1\"" in resp.data
+
+    def test_graded_assignment_data_ungraded_zero(self, client, engine):
+        """Graded assignment gets data-ungraded='0' on its row."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, status="Graded")
+        resp = client.get("/")
+        assert b"data-ungraded=\"0\"" in resp.data
+
+    def test_details_has_data_class_idx(self, client, engine):
+        """Each class details element has a data-class-idx attribute for JS."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert b"data-class-idx=" in resp.data
+
+    def test_filter_count_span_present(self, client, engine):
+        """Filter count span is rendered in each class header."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert b"filter-count" in resp.data
+
+
+# ---------------------------------------------------------------------------
 # Ho 5.1 — Attachment Visibility
 # ---------------------------------------------------------------------------
 

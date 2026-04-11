@@ -61,8 +61,16 @@
     </div>
     {% endfor %}
   </div>
+
+  <div class="filter-bar no-print" id="dashFilterBar">
+    <button class="btn btn-filter active" data-filter="all" onclick="setDashFilter('all')">All</button>
+    <button class="btn btn-filter" data-filter="no-due" onclick="setDashFilter('no-due')">No Due Date</button>
+    <button class="btn btn-filter" data-filter="no-attach" onclick="setDashFilter('no-attach')">No Attachments</button>
+    <button class="btn btn-filter" data-filter="never-graded" onclick="setDashFilter('never-graded')">Never Graded</button>
+  </div>
+
   {% for cls in classes %}
-  <details open id="{{ cls.name | urlencode }}">
+  <details open id="{{ cls.name | urlencode }}" data-class-idx="{{ loop.index0 }}">
     <summary>
       <div class="card-header">
         <span class="chevron">▶</span>
@@ -72,6 +80,7 @@
           <span class="stat stat-missing"><span class="stat-val">{{ cls.stats.missing }}</span> missing</span>
           <span class="stat stat-attention"><span class="stat-val">{{ cls.stats.needs_attention }}</span> to do</span>
           <span class="stat"><span class="stat-val">{{ cls.stats.done }}</span> done</span>
+          <span class="stat filter-count" id="fcount-{{ loop.index0 }}" style="display:none"></span>
         </div>
         <span class="spacer"></span>
         <a href="/class/{{ cls.name | urlencode }}" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">View class</a>
@@ -96,7 +105,11 @@
           <tbody>
             {% for a in cls.assignments %}
             {% set att_count = count_attachments(a.attachment_links) %}
-            <tr>
+            <tr class="assignment-row"
+                data-id="{{ a.id }}"
+                data-no-due="{{ '1' if not a.due_date else '0' }}"
+                data-no-attach="{{ '1' if not a.attachment_links else '0' }}"
+                data-ungraded="{{ '1' if a.status != 'Graded' else '0' }}">
               <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
               <td class="nowrap">{{ a.posted_date or '—' }}</td>
               <td class="nowrap">{{ a.due_date or '—' }}</td>
@@ -139,5 +152,42 @@
   </details>
   {% endfor %}
 {% endif %}
+
+<script>
+function setDashFilter(f) {
+  document.querySelectorAll('.btn-filter').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  var predicates = {
+    'all': function() { return true; },
+    'no-due': function(tr) { return tr.dataset.noDue === '1'; },
+    'no-attach': function(tr) { return tr.dataset.noAttach === '1'; },
+    'never-graded': function(tr) { return tr.dataset.ungraded === '1'; }
+  };
+  var test = predicates[f] || predicates['all'];
+  document.querySelectorAll('details[data-class-idx]').forEach(function(det) {
+    var idx = det.dataset.classIdx;
+    var rows = det.querySelectorAll('tbody tr.assignment-row');
+    var visible = 0;
+    rows.forEach(function(tr) {
+      var show = test(tr);
+      tr.style.display = show ? '' : 'none';
+      var panel = document.getElementById('attach-panel-' + tr.dataset.id);
+      if (panel && !show) panel.style.display = 'none';
+      if (show) visible++;
+    });
+    var countEl = document.getElementById('fcount-' + idx);
+    if (countEl) {
+      if (f !== 'all') {
+        countEl.textContent = visible + ' of ' + rows.length + ' shown';
+        countEl.style.display = '';
+      } else {
+        countEl.style.display = 'none';
+      }
+    }
+    det.style.opacity = (f !== 'all' && visible === 0) ? '0.4' : '';
+  });
+}
+</script>
 
 {% endblock %}

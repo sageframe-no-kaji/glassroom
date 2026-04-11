@@ -460,6 +460,43 @@ a:hover { text-decoration: underline; }
   font-size: 0.8rem;
 }
 
+/* ---- Dashboard filter bar ---- */
+.filter-bar {
+  margin: 0.5rem 0 1rem;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.btn-filter {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.75rem;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.1s;
+}
+
+.btn-filter:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+.btn-filter.active {
+  background: var(--blue-dark);
+  color: #fff;
+  border-color: var(--blue-dark);
+}
+
+.filter-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ---- Empty state ---- */
 .empty-state {
   padding: 2.5rem 1.5rem;
