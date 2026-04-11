@@ -17,6 +17,7 @@ from src.downloader import (
     _slugify,
     _title_slug,
     _unique_filename,
+    attachment_type,
 )
 
 
@@ -229,3 +230,37 @@ class TestPreviouslyDownloaded:
 
     def test_empty_manifest(self):
         assert _previously_downloaded({}, "math-smith", "hw1.pdf") is False
+
+
+# ---------------------------------------------------------------------------
+# attachment_type
+# ---------------------------------------------------------------------------
+
+
+class TestAttachmentType:
+    def test_google_doc(self):
+        assert attachment_type("https://docs.google.com/document/d/abc/edit") == "Doc"
+
+    def test_google_slides(self):
+        assert attachment_type("https://docs.google.com/presentation/d/xyz/edit") == "Slides"
+
+    def test_google_sheets(self):
+        assert attachment_type("https://docs.google.com/spreadsheets/d/sheet/edit") == "Sheet"
+
+    def test_google_forms(self):
+        assert attachment_type("https://docs.google.com/forms/d/form123/viewform") == "Form"
+
+    def test_google_drive_file(self):
+        assert attachment_type("https://drive.google.com/file/d/fileid/view") == "Drive"
+
+    def test_youtube_full(self):
+        assert attachment_type("https://www.youtube.com/watch?v=abc") == "Video"
+
+    def test_youtu_be_short(self):
+        assert attachment_type("https://youtu.be/abc123") == "Video"
+
+    def test_external_link(self):
+        assert attachment_type("https://example.com/some-resource") == "Link"
+
+    def test_empty_string_returns_link(self):
+        assert attachment_type("") == "Link"

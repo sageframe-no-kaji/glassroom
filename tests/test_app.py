@@ -543,3 +543,157 @@ class TestAttachVisibility:
         assert resp.status_code == 200
         assert b"Attach" in resp.data
 
+
+# ---------------------------------------------------------------------------
+# Dashboard — archived classes path (dashboard.py line 90)
+# ---------------------------------------------------------------------------
+
+
+class TestDashboardArchived:
+    def test_archived_class_sorted_after_active(self, client, engine):
+        """Archived classes appear after active classes in the dashboard."""
+        with get_session(engine) as s:
+            sc_active = SelectedClass(name="Active Class", course_url="https://classroom.google.com/c/a1", active=True, archived=False)
+            sc_archived = SelectedClass(name="Old Class", course_url="https://classroom.google.com/c/a2", active=True, archived=True)
+            s.add(sc_active)
+            s.add(sc_archived)
+            s.commit()
+            _make_assignment(s, assignment_url="https://example.com/a/1", class_name="Active Class")
+            _make_assignment(s, assignment_url="https://example.com/a/2", class_name="Old Class")
+        resp = client.get("/")
+        assert resp.status_code == 200
+        content = resp.data.decode()
+        # Both classes appear
+        assert "Active Class" in content
+        assert "Old Class" in content
+        # Archived badge present for archived class
+        assert "archived-badge" in content
+        # Active class appears before archived class in rendered output
+        assert content.index("Active Class") < content.index("Old Class")
+
+
+# ---------------------------------------------------------------------------
+# API — POST /api/scrape  (trigger endpoint — thread stub)
+# ---------------------------------------------------------------------------
+
+
+class TestScrapeTrigger:
+    def test_returns_ok_when_not_running(self, client, monkeypatch):
+        """POST /api/scrape enqueues and returns ok: true."""
+        import src.routes.api as api_mod
+        # Prevent the background thread from actually spawning Playwright
+        monkeypatch.setattr(api_mod, "_scrape_state", {
+            "running": False,
+            "progress": {},
+            "auto_download": False,
+        })
+        spawned = []
+        import threading
+        monkeypatch.setattr(threading, "Thread", lambda target, daemon=True: type("T", (), {"start": lambda self: spawned.append(1)})())
+        resp = client.post("/api/scrape")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ok"] is True
+
+    def test_returns_409_when_already_running(self, client, monkeypatch):
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_scrape_state", {
+            "running": True,
+            "progress": {},
+            "auto_download": False,
+        })
+        resp = client.post("/api/scrape")
+        assert resp.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# API — POST /api/download  (trigger endpoint — no page nav)
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadTrigger:
+    def test_returns_json_not_html(self, client, monkeypatch):
+        """POST /api/download must return JSON, never a page redirect."""
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_start_download", lambda: None)
+        resp = client.post("/api/download")
+        assert resp.status_code == 200
+        assert resp.content_type.startswith("application/json")
+        data = resp.get_json()
+        assert data["ok"] is True
+
+    def test_does_not_set_location_header(self, client, monkeypatch):
+        """Ensure no redirect to raw JSON (original bug)."""
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_start_download", lambda: None)
+        resp = client.post("/api/download")
+        assert resp.status_code == 200
+        assert "Location" not in resp.headers
+
+
+# ---------------------------------------------------------------------------
+# API — GET /api/login/status
+# ---------------------------------------------------------------------------
+
+
+class TestLoginStatus:
+    def test_returns_status_key(self, client):
+        resp = client.get("/api/login/status")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "status" in data
+
+    def test_initial_status_is_idle(self, client, monkeypatch):
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_login_state", {"status": "idle", "error": None, "classes": []})
+        resp = client.get("/api/login/status")
+        assert resp.get_json()["status"] == "idle"
+
+
+# ---------------------------------------------------------------------------
+# API — GET /api/session/status
+# ---------------------------------------------------------------------------
+
+
+class TestSessionStatus:
+    def test_returns_valid_false_when_no_session_dir(self, client, tmp_path, monkeypatch):
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "SESSION_DIR", tmp_path / "nonexistent")
+        resp = client.get("/api/session/status")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["valid"] is False
+
+    def test_returns_valid_true_when_session_dir_has_files(self, client, tmp_path, monkeypatch):
+        session_dir = tmp_path / "session"
+        session_dir.mkdir()
+        (session_dir / "Default").mkdir()  # non-empty dir
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "SESSION_DIR", session_dir)
+        resp = client.get("/api/session/status")
+        data = resp.get_json()
+        assert data["valid"] is True
+
+
+# ---------------------------------------------------------------------------
+# API — Baserow endpoints return 400 when not configured
+# ---------------------------------------------------------------------------
+
+
+class TestBaserowUnconfigured:
+    def test_test_endpoint_400_no_config(self, client, monkeypatch):
+        # load_settings is imported locally inside the handler, so patch the source
+        monkeypatch.setattr("src.config.load_settings", lambda: {})
+        resp = client.post("/api/baserow/test", json={})
+        assert resp.status_code == 400
+
+    def test_setup_endpoint_400_no_config(self, client, monkeypatch):
+        monkeypatch.setattr("src.config.load_settings", lambda: {})
+        resp = client.post("/api/baserow/setup")
+        assert resp.status_code == 400
+
+    def test_export_endpoint_400_no_config(self, client, monkeypatch):
+        monkeypatch.setattr("src.config.load_settings", lambda: {})
+        resp = client.post("/api/baserow/export")
+        assert resp.status_code == 400
+
