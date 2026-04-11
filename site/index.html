@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Glassroom — See what's really happening in your kid's Google Classroom</title>
   <meta name="description" content="Glassroom makes Google Classroom transparent. See every assignment across every class — what was provided, what wasn't, and what's missing. Built for parents, IEP teams, and advocates.">
+  <link rel="icon" type="image/svg+xml" href="images/glass-48.svg">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- ── Navigation ── -->
 <nav>
-  <a href="#" class="nav-brand">Glassroom</a>
+  <a href="#" class="nav-brand"><img src="images/glass-48.svg" alt="" class="nav-logo">Glassroom</a>
   <div class="nav-links">
     <a href="#problem">The problem</a>
     <a href="#what-it-does">What it does</a>
@@ -23,6 +24,7 @@
 <!-- ── Hero ── -->
 <section id="hero">
   <div class="container">
+    <img src="images/glass-48.svg" alt="Glassroom" class="hero-logo">
     <p class="eyebrow">Free &amp; open source</p>
     <h1>See what's <em>really</em> happening in your kid's Google Classroom.</h1>
     <p class="subhead">
@@ -35,10 +37,11 @@
       <a href="demo/index.html" class="btn btn-outline">Try the Demo</a>
       <a href="https://github.com/sageframe-no-kaji/glassroom" class="btn btn-outline">View on GitHub</a>
     </div>
+    <p class="hero-byline">Built by a learning systems designer with 25 years in K-12 education. <a href="https://atmarcus.net/work/empty-container">Read the research behind Glassroom →</a></p>
   </div>
 </section>
 
-<!-- ── Dashboard mockup ── -->
+<!-- ── Dashboard screenshot ── -->
 <section id="mockup" style="padding: 2.5rem 0 3.5rem">
   <div class="container">
     <div class="mockup-frame">
@@ -48,59 +51,7 @@
         <div class="mockup-dot"></div>
         <div class="mockup-url"></div>
       </div>
-      <div class="mockup-body">
-        <div class="mockup-nav-bar">
-          <div class="mockup-nav-pill" style="width:80px"></div>
-          <div class="mockup-nav-pill" style="width:55px"></div>
-          <div class="mockup-nav-pill" style="width:70px"></div>
-          <div class="mockup-nav-pill" style="width:55px"></div>
-        </div>
-
-        <!-- Class 1: ELA -->
-        <div class="mockup-class-block">
-          <div class="mockup-class-header">
-            <div class="mockup-class-name"></div>
-            <div class="mockup-badge badge-red" title="Missing"></div>
-            <div class="mockup-badge badge-amber" title="Assigned"></div>
-            <div class="mockup-badge badge-green" title="Done"></div>
-          </div>
-          <div class="mockup-row">
-            <div class="mockup-title" style="max-width:280px"></div>
-            <div class="mockup-meta"></div>
-            <div class="mockup-status badge-red"></div>
-          </div>
-          <div class="mockup-row">
-            <div class="mockup-title" style="max-width:220px"></div>
-            <div class="mockup-meta"></div>
-            <div class="mockup-status badge-amber"></div>
-          </div>
-          <div class="mockup-row">
-            <div class="mockup-title" style="max-width:310px"></div>
-            <div class="mockup-meta"></div>
-            <div class="mockup-status badge-green"></div>
-          </div>
-        </div>
-
-        <!-- Class 2: Math -->
-        <div class="mockup-class-block">
-          <div class="mockup-class-header">
-            <div class="mockup-class-name" style="width:90px"></div>
-            <div class="mockup-badge badge-amber" title="Assigned"></div>
-            <div class="mockup-badge badge-green" title="Done"></div>
-          </div>
-          <div class="mockup-row">
-            <div class="mockup-title" style="max-width:260px"></div>
-            <div class="mockup-meta"></div>
-            <div class="mockup-status badge-amber"></div>
-          </div>
-          <div class="mockup-row">
-            <div class="mockup-title" style="max-width:200px"></div>
-            <div class="mockup-meta"></div>
-            <div class="mockup-status badge-green"></div>
-          </div>
-        </div>
-
-      </div>
+      <img src="images/hero.png" alt="Glassroom dashboard screenshot" style="width:100%;display:block;border-radius:0 0 8px 8px;">
     </div>
     <p style="text-align:center;font-size:0.82rem;color:#999;margin-top:0.9rem">
       Dashboard view — all classes, all assignments, one page.
@@ -153,7 +104,7 @@
   <div class="container">
     <h2>What Glassroom does.</h2>
     <p class="section-subhead">
-      Glassroom runs on your computer and scrapes your kid's Google Classroom assignments into a local database. No API access. No third-party servers. Just you and the data.
+      Glassroom runs on your computer and stores everything in a local database. No API access. No accounts. No data leaves your machine — except the Google login, which goes directly to Google the same way any browser login does.
     </p>
     <div class="features-grid">
       <div class="feature-card">
@@ -173,13 +124,13 @@
       </div>
       <div class="feature-card">
         <div class="feature-icon">📤</div>
-        <h3>Exports everything</h3>
+        <h3>Export everything</h3>
         <p>Export everything to a CSV for your records, or to a database for advanced filtering, sharing, or handing to an advocate.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔒</div>
         <h3>Runs locally, stays private</h3>
-        <p>Glassroom runs on your own computer. Your kid's data never leaves your machine. Nothing is sent to any server.</p>
+        <p>Your kid's data never leaves your machine. The only outbound communication is the Google login — the same request your browser makes when you sign into Google. No Glassroom server. No telemetry. No third-party anything.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔄</div>
@@ -199,7 +150,7 @@
     </p>
     <div class="survey-embed">
       <iframe data-tally-src="https://tally.so/embed/aQDAxW?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" loading="lazy" width="100%" height="500" frameBorder="0" marginHeight="0" marginWidth="0" title="Parent Voice Survey"></iframe>
-      <script src="https://tally.so/widgets/embed.js"><\/script>
+      <script src="https://tally.so/widgets/embed.js"></script>
     </div>
     <p class="survey-direct">
       Or take the survey directly →
@@ -225,7 +176,7 @@
         <p>What was and wasn't provided through Google Classroom. Timestamped. Downloadable. Exportable. The documentation you need before the meeting — not after.</p>
       </div>
       <div class="who-card">
-        <h3>Anyone who's been told "it's all in Classroom"</h3>
+        <h3>Anyone who's been told “it's all in Classroom”</h3>
         <p>And had no way to verify that. Now you do.</p>
       </div>
       <div class="who-card">
@@ -243,9 +194,9 @@
 <!-- ── How to Install ── -->
 <section id="install" class="dark">
   <div class="container">
-    <h2>Up and running in 4 steps.</h2>
+    <h2>Up and running in 3 steps.</h2>
     <p class="section-subhead">
-      You need Docker. That's it. No Python, no terminal experience beyond copy-pasting one command.
+      You need Docker. That's it. No Python, no code, no technical experience beyond copy-pasting two commands.
     </p>
 
     <div class="install-steps">
@@ -256,26 +207,20 @@
       </div>
       <div class="install-step">
         <div class="step-number">02</div>
-        <h3>Download Glassroom</h3>
-        <p>
-          <a href="https://github.com/sageframe-no-kaji/glassroom/archive/refs/heads/main.zip" target="_blank" rel="noopener">Download the ZIP</a> from GitHub and unzip it anywhere on your computer.
-        </p>
+        <h3>Run two commands</h3>
+        <p>Create a folder anywhere, open a terminal in it, and paste these two commands. Docker does the rest.</p>
       </div>
       <div class="install-step">
         <div class="step-number">03</div>
-        <h3>Run one command</h3>
-        <p>Open a terminal in the Glassroom folder and run:</p>
-      </div>
-      <div class="install-step">
-        <div class="step-number">04</div>
         <h3>Open your browser</h3>
         <p>Visit <strong style="color:#fff">localhost:3000</strong> and follow the setup steps. Log in, pick your kid's classes, scrape.</p>
       </div>
     </div>
 
     <div class="terminal-block">
-      <pre><span class="comment"># In the glassroom folder:</span>
-<span class="prompt">$ </span>docker compose up
+      <pre><span class="comment"># Download the config file and start Glassroom:</span>
+<span class="prompt">$ </span>curl -O https://raw.githubusercontent.com/sageframe-no-kaji/glassroom/main/docker-compose.yml
+<span class="prompt">$ </span>docker compose up -d
 
 <span class="comment"># Then open:</span>
 <span class="prompt">$ </span>open http://localhost:3000</pre>
@@ -308,7 +253,7 @@
   <div class="container" style="text-align:center;padding:2.5rem 1rem">
     <p style="margin:0 0 0.6rem;font-size:0.95rem;color:#555">
       Built by a learning systems designer with 25 years in K-12 education.
-      <a href="https://atmarcus.net/glassroom" target="_blank" rel="noopener">Read the research behind Glassroom →</a>
+      <a href="https://atmarcus.net/work/empty-container" target="_blank" rel="noopener">Read the research behind Glassroom →</a>
     </p>
     <p style="margin:0;font-size:0.9rem;color:#777">
       Support this project →

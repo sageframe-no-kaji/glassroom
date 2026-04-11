@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glassroom — Demo Dashboard</title>
+  <meta name="description" content="Live demo of the Glassroom dashboard with sample data showing four real-world class types.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Demo banner -->
+<div class="demo-banner">
+  <strong>Demo Mode</strong> — This is sample data showing what Glassroom looks like with real classes.
+  <span class="demo-spacer"></span>
+  <a href="../index.html">Get started with your own data →</a>
+</div>
+
+<!-- Nav -->
+<nav>
+  <a href="../index.html" class="nav-brand">Glassroom</a>
+  <div class="nav-links">
+    <button class="nav-link active" id="nav-dashboard">Dashboard</button>
+    <button class="nav-link" id="nav-todo">To Do</button>
+    <a class="nav-link disabled" href="#" onclick="return false" title="Not available in demo">Downloads</a>
+    <a class="nav-link disabled" href="#" onclick="return false" title="Not available in demo">Setup</a>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <h1 id="page-title">Dashboard</h1>
+    <button class="btn btn-secondary btn-sm" id="btn-export">Export CSV</button>
+  </div>
+
+  <!-- Per-class stat cards -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- Assignment groups -->
+  <div id="main-content"></div>
+
+</main>
+
+<script src="demo.js"></script>
+</body>
+</html>
