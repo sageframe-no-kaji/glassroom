@@ -20,7 +20,20 @@
 
 Google Classroom was designed for teachers, not parents. There's no cross-class view, no way to see what's due across all your kid's classes at once, and no way to tell whether an assignment came with actual instructions or just a title.
 
-Glassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. One dashboard. Every Glassroom fi assignG mGlaingGlassroom fixes this. One dashboiewGlassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. One dashpulls alGlassroom fcs, SlidGlassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. One dashboard. Every Glassroom fi assignG mGlaingGlassroom fixes this. tiGlassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. nges are Glassroom fixes this. One dashboard. Every Glassroom fi assignGlassrooix classesGlassroom fixes tnt teachers
+Glassroom fixes this. One dashboard. Every class. Every assignment.
+
+## What it does
+
+- **One dashboard** for every class — missing, assigned, graded, all in one view
+- **Stat cards** per class with color-coded completion indicators
+- **PDF downloader** — pulls all Google Docs, Slides, and Sheets attachments
+- **CSV export** at any time — full data, filterable by class or status
+- **Works without API access** — uses browser automation the same way you would
+- **Idempotent** — scrape as often as you want, only changes are recorded
+
+## Who this is for
+
+- **Parents tracking homework** across six classes with six different teachers
 - **Parents of kids with IEPs** — verify whether accommodations involving materials and instructions are actually being honored
 - **Parents of kids on medical leave** — confirm teachers are posting materials remotely
 - **Special education advocates** — export structured, timestamped data for IEP meetings or BSEA hearings
@@ -47,11 +60,29 @@ Glassroom pulls the pre-built image from GitHub Container Registry — no buildi
 ### First-run setup (~2 minutes)
 
 1. **Log in** — click "Open login browser." A tab opens showing a Chrome window inside the container. Sign in with your kid's school Google account. When Glassroom detects the Classroom homepage, the tab closes and setup continues.
-2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.sroom pulls all assign2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2un2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2 in a `data/` folder created next to your `2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.QLit2.2.2.2.2─ config.json       — class selections and settings
+2. **Select classes** — check which classes to track. Archived classes available too.
+3. **Scrape** — Glassroom pulls all assignments in the background.
+4. **Done** — you're on the dashboard.
+
+After setup, scrapes run headlessly. Trigger a new one any time from the nav bar.
+
+---
+
+## Data & persistence
+
+All data lives in a `data/` folder created next to your `docker-compose.yml`:
+
+```
+data/
+├── classroom.db      — all assignments (SQLite)
+├── config.json       — class selections and settings
 └── downloads/        — PDFs organized by class
 ```
 
-The Google sessThn iThe Google sessThn iThe Google ses(`glThe Google sessThn iThe Google sessThn iThe Google ses(`glThe Google sessThn iThe Google sessThn iThe Google ses(` downThe Google sessThn iThe Googld)
+The Google session is stored in a Docker named volume (`glassroom-session`) — it persists across restarts and is never written to your filesystem.
+
+```bash
+docker compose down        # stop (data preserved)
 docker compose up -d       # restart
 docker compose down -v     # full reset — removes session
 rm -rf data/               # remove database and downloads
