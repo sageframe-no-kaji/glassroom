@@ -1,5 +1,6 @@
 services:
   glassroom:
+    image: ghcr.io/sageframe-no-kaji/glassroom:latest
     build: .
     ports:
       - "3000:3000"    # Glassroom dashboard
