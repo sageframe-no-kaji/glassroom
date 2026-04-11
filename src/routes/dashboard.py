@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Optional, cast
 
 from flask import Blueprint, current_app, redirect, render_template, url_for
 
@@ -25,10 +26,10 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
     done = sum(1 for a in assignments if a.status in _DONE_STATUSES)
     missing = sum(1 for a in assignments if a.status in _URGENT_STATUSES)
     needs_attention = sum(1 for a in assignments if a.status in _ATTENTION_STATUSES)
-    graded = sum(1 for a in assignments if a.status == "Graded")
-    pct_due = round(100 * sum(1 for a in assignments if a.due_date) / total) if total else 0
+    graded = sum(1 for a in assignments if cast(str, a.status) == "Graded")
+    pct_due = round(100 * sum(1 for a in assignments if cast(Optional[str], a.due_date)) / total) if total else 0
     pct_attach = (
-        round(100 * sum(1 for a in assignments if a.attachment_links) / total)
+        round(100 * sum(1 for a in assignments if cast(Optional[str], a.attachment_links)) / total)
         if total
         else 0
     )
@@ -63,7 +64,7 @@ def dashboard() -> str:
     session_valid = SESSION_DIR.exists() and any(SESSION_DIR.iterdir())
 
     # Map class name → archived flag
-    archived_names: set[str] = {sc.name for sc in selected_classes if sc.archived}
+    archived_names: set[str] = {cast(str, sc.name) for sc in selected_classes if cast(bool, sc.archived)}
 
     # Group by class and sort within each class
     by_class: dict[str, list[Assignment]] = defaultdict(list)
