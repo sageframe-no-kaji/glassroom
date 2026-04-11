@@ -9,72 +9,44 @@
   <a href="/api/export/csv?view=todo" class="btn btn-secondary btn-sm no-print">Export CSV</a>
 </div>
 
-{% if not classes %}
+<div class="filter-bar no-print">
+  <a href="/todo?view=this-week"  class="btn btn-filter {% if active_view == 'this-week'  %}active{% endif %}">This Week</a>
+  <a href="/todo?view=next-week"  class="btn btn-filter {% if active_view == 'next-week'  %}active{% endif %}">Next Week</a>
+  <a href="/todo?view=all"        class="btn btn-filter {% if active_view == 'all'        %}active{% endif %}">All</a>
+  <a href="/todo?view=overdue"    class="btn btn-filter {% if active_view == 'overdue'    %}active{% endif %}">Overdue</a>
+  {% if active_view == 'this-week' %}
+  <span class="filter-bar-label">{{ this_week_range }}</span>
+  {% elif active_view == 'next-week' %}
+  <span class="filter-bar-label">{{ next_week_range }}</span>
+  {% endif %}
+</div>
+
+{% if not classes and not no_due_classes %}
   <div class="empty-state">
     <p>Nothing to do! All assignments are submitted or complete.</p>
   </div>
 {% else %}
-  {% for cls in classes %}
-  <div class="card" style="margin-bottom:1rem;">
-    <div class="card-header card-header-static">
-      <h2>{{ cls.name }}</h2>
-      <span class="text-muted text-sm">{{ cls.assignments | length }} remaining</span>
-      <span class="spacer"></span>
-      <a href="/api/export/csv?view=todo&class={{ cls.name | urlencode }}" class="btn btn-secondary btn-sm no-print">Export</a>
-    </div>
-    <div class="card-body">
-      <table>
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Category</th>
-            <th>Due</th>
-            <th>Status</th>
-            <th>Points</th>
-            <th>Grade</th>
-            <th>Attach</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for a in cls.assignments %}
-          {% set att_count = count_attachments(a.attachment_links) %}
-          <tr>
-            <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
-            <td class="nowrap text-muted text-sm">{{ a.category or '—' }}</td>
-            <td class="nowrap">{{ a.due_date or '—' }}</td>
-            <td>{% include "partials/status_badge.html" %}</td>
-            <td>{{ a.points_possible or '—' }}</td>
-            <td>{{ a.grade or '—' }}</td>
-            <td class="nowrap">
-              {% if att_count %}
-              <button class="attach-toggle" onclick="toggleAttach({{ a.id }})" type="button">📎 {{ att_count }}</button>
-              {% else %}—{% endif %}
-            </td>
-          </tr>
-          {% if att_count %}
-          <tr id="attach-panel-{{ a.id }}" class="attach-panel" style="display:none">
-            <td colspan="7">
-              <div class="attach-list">
-                {% for l in (a.attachment_links or '').split('\n') if l.strip() %}
-                {% set tlist = (a.attachment_titles or '').split('\n') %}
-                {% set ttl = tlist[loop.index0].strip() if loop.index0 < tlist | length else '' %}
-                <div class="attach-item">
-                  <span class="attach-type">{{ l | attachment_type }}</span>
-                  <a href="{{ l }}" target="_blank" rel="noopener">{{ ttl or l }}</a>
-                </div>
-                {% endfor %}
-              </div>
-              {% set pdf_url = pdf_url_for_assignment(a.class_name, a.posted_date, a.title) %}
-              {% if pdf_url %}<div class="attach-pdf"><a href="{{ pdf_url }}" target="_blank" rel="noopener">📎 View downloaded copy</a></div>{% endif %}
-            </td>
-          </tr>
-          {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+
+  {% if not classes %}
+  <div class="empty-state" style="padding:1rem 0 0.5rem">
+    <p>No assignments match this filter.</p>
   </div>
+  {% endif %}
+
+  {% for cls in classes %}
+  {% include "partials/todo_class_card.html" %}
   {% endfor %}
+
+  {% if no_due_classes %}
+  <div class="todo-nodue-section">
+    <div class="todo-nodue-header">No Due Date</div>
+    <p class="todo-nodue-sub">These assignments have no due date — they won't appear in week filters but always need attention.</p>
+    {% for cls in no_due_classes %}
+    {% include "partials/todo_class_card.html" %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
 {% endif %}
 
 {% endblock %}

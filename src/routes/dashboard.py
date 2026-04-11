@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date, timedelta
 from typing import Any, Optional, cast
 
-from flask import Blueprint, current_app, redirect, render_template, url_for
+from flask import Blueprint, current_app, redirect, render_template, request, url_for
 
 from src.db import get_session
 from src.downloader import DOWNLOADS_DIR, attachment_type
@@ -197,6 +198,19 @@ def class_detail(class_name: str) -> str:
 @bp.route("/todo")
 def todo() -> str:
     engine = current_app.config["DB_ENGINE"]
+    view = request.args.get("view", "this-week")
+    if view not in ("this-week", "next-week", "all", "overdue"):
+        view = "this-week"
+
+    # Date bounds for filtering (ISO YYYY-MM-DD string comparisons)
+    today = date.today()
+    today_str = today.isoformat()
+    monday = today - timedelta(days=today.weekday())
+    this_monday = monday.isoformat()
+    this_sunday = (monday + timedelta(days=6)).isoformat()
+    next_monday = (monday + timedelta(days=7)).isoformat()
+    next_sunday = (monday + timedelta(days=13)).isoformat()
+
     with get_session(engine) as session:
         assignments = (
             session.query(Assignment)
@@ -207,20 +221,37 @@ def todo() -> str:
             .all()
         )
 
-    by_class: dict[str, list[Assignment]] = defaultdict(list)
-    for a in assignments:
-        by_class[str(a.class_name or "Unknown")].append(a)
+    # Split: no due date always shown in their own section
+    has_due = [a for a in assignments if cast(Optional[str], a.due_date)]
+    no_due  = [a for a in assignments if not cast(Optional[str], a.due_date)]
 
-    classes = []
-    for class_name in sorted(by_class.keys()):
-        rows = sorted(by_class[class_name], key=_sort_key)
-        classes.append({
-            "name": class_name,
-            "assignments": rows,
-            "stats": _class_stats(rows),
-        })
+    # Apply view filter to has_due
+    if view == "this-week":
+        has_due = [a for a in has_due if this_monday <= cast(str, a.due_date) <= this_sunday]
+    elif view == "next-week":
+        has_due = [a for a in has_due if next_monday <= cast(str, a.due_date) <= next_sunday]
+    elif view == "overdue":
+        has_due = [a for a in has_due if cast(str, a.due_date) < today_str]
+    # view == "all" → no additional filter
 
-    return render_template("todo.html", classes=classes)
+    def _group(rows: list[Assignment]) -> list[dict[str, Any]]:
+        by_class: dict[str, list[Assignment]] = defaultdict(list)
+        for a in rows:
+            by_class[str(a.class_name or "Unknown")].append(a)
+        result = []
+        for class_name in sorted(by_class.keys()):
+            sorted_rows = sorted(by_class[class_name], key=_sort_key)
+            result.append({"name": class_name, "assignments": sorted_rows, "stats": _class_stats(sorted_rows)})
+        return result
+
+    return render_template(
+        "todo.html",
+        classes=_group(has_due),
+        no_due_classes=_group(no_due),
+        active_view=view,
+        this_week_range=f"{this_monday} – {this_sunday}",
+        next_week_range=f"{next_monday} – {next_sunday}",
+    )
 
 
 @bp.route("/downloads")

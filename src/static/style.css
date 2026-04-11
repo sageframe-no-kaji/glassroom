@@ -577,6 +577,35 @@ a:hover { text-decoration: underline; }
   font-style: italic;
 }
 
+.filter-bar-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  align-self: center;
+  padding-left: 0.25rem;
+}
+
+/* ---- To Do "No Due Date" section ---- */
+.todo-nodue-section {
+  margin-top: 2rem;
+  border-top: 2px dashed var(--border);
+  padding-top: 1rem;
+}
+
+.todo-nodue-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.todo-nodue-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
 /* ---- Empty state ---- */
 .empty-state {
   padding: 2.5rem 1.5rem;

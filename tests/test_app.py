@@ -226,7 +226,7 @@ class TestTodo:
                 s, assignment_url="https://example.com/a/3",
                 title="No Turn In", status="Assigned", turn_in_required=False
             )
-        resp = client.get("/todo")
+        resp = client.get("/todo?view=all")
         assert b"Need to Submit" in resp.data
         assert b"Already Done" not in resp.data
         assert b"No Turn In" not in resp.data
@@ -930,6 +930,108 @@ class TestNewSinceLastScrape:
 
 
 # ---------------------------------------------------------------------------
+# Ho 5.7 — "This Week" View on To Do
+# ---------------------------------------------------------------------------
+
+
+class TestTodoWeekFilter:
+    """Tests for the To Do week filter (This Week / Next Week / All / Overdue)."""
+
+    def test_default_view_is_this_week(self, client, engine):
+        """GET /todo with no ?view= defaults to this-week (active button shown)."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/todo")
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        # The 'This Week' button should have the active class
+        assert 'This Week' in html
+
+    def test_filter_bar_shows_all_four_buttons(self, client, engine):
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/todo")
+        html = resp.data.decode()
+        assert "This Week" in html
+        assert "Next Week" in html
+        assert ">All<" in html
+        assert "Overdue" in html
+
+    def test_all_view_shows_assignment(self, client, engine):
+        """?view=all returns all pending assignments regardless of due date."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date="2026-01-01")
+        resp = client.get("/todo?view=all")
+        assert resp.status_code == 200
+        assert b"HW 1" in resp.data
+
+    def test_overdue_shows_past_due(self, client, engine):
+        """?view=overdue shows assignments due before today."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            # Very old due date — always overdue
+            _make_assignment(s, due_date="2020-01-01")
+        resp = client.get("/todo?view=overdue")
+        assert resp.status_code == 200
+        assert b"HW 1" in resp.data
+
+    def test_overdue_hides_future(self, client, engine):
+        """?view=overdue does not show assignments due in the future."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date="2099-12-31")
+        resp = client.get("/todo?view=overdue")
+        assert b"HW 1" not in resp.data
+
+    def test_no_due_section_always_shown(self, client, engine):
+        """Assignments with no due date appear in the 'No Due Date' section on all views."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date=None)
+        for view in ("this-week", "next-week", "all", "overdue"):
+            resp = client.get(f"/todo?view={view}")
+            assert b"No Due Date" in resp.data, f"No Due Date section missing for view={view}"
+            assert b"HW 1" in resp.data, f"Assignment missing from no-due section for view={view}"
+
+    def test_no_due_section_absent_when_all_have_due(self, client, engine):
+        """No Due Date section does not appear when all assignments have a due date."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, due_date="2020-01-01")
+        resp = client.get("/todo?view=all")
+        assert b"No Due Date" not in resp.data
+
+    def test_invalid_view_falls_back_to_this_week(self, client, engine):
+        """An unknown ?view= value defaults to this-week without error."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/todo?view=garbage")
+        assert resp.status_code == 200
+
+    def test_week_range_label_shown_for_this_week(self, client, engine):
+        """This Week view shows the date range label."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/todo?view=this-week")
+        # The date range string YYYY-MM-DD – YYYY-MM-DD should appear
+        import re
+        assert re.search(rb"\d{4}-\d{2}-\d{2}", resp.data)
+
+    def test_next_week_view_ok(self, client, engine):
+        """?view=next-week renders without error."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/todo?view=next-week")
+        assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
 # Ho 5.1 — Attachment Visibility
 # ---------------------------------------------------------------------------
 
@@ -1019,7 +1121,7 @@ class TestAttachVisibility:
         with get_session(engine) as s:
             _make_selected_class(s)
             _make_assignment(s, turn_in_required=True, status="Assigned")
-        resp = client.get("/todo")
+        resp = client.get("/todo?view=all")
         assert resp.status_code == 200
         assert b"Attach" in resp.data
 
