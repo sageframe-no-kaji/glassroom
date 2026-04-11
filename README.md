@@ -1,98 +1,76 @@
-# Glassroom
+<p align="center">
+  <img src="src/static/glass-48.svg" width="96" alt="Glassroom">
+</p>
 
-**See what's really happening in your kid's Google Classroom.**
+<h1 align="center">Glassroom</h1>
 
-Google Classroom is the most widely used learning platform in American K-12 education. Over 150 million students and teachers use it. But it was designed for teachers, not parents — and it shows. There's no cross-class view. No way to see what's due across all your kid's classes at once. No way to tell whether an assignment was actually given instructions, or if the teacher just posted a title and walked away.
+<p align="center"><strong>See what's really happening in your kid's Google Classroom.</strong></p>
 
-Glassroom fixes this.
+<p align="center">
+  <a href="https://github.com/sageframe-no-kaji/glassroom/releases/tag/v1.0.0"><img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="v1.0.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="GHCR">
+</p>
 
-## What it does
-
-- Pulls every assignment from every class into one dashboard
-- Shows what's done, what's missing, and what needs attention
-- Downloads all Google Docs, Slides, and Sheets attachments as PDFs
-- Exports everything to CSV at any time
-- Works even when the school blocks the Google Classroom API
-- Idempotent — run it as often as you want, it only updates what changed
-
-## Who this is for
-
-- **Parents trying to keep track of homework.** Six classes, six teachers, six different ways of using Classroom. Glassroom puts it all in one place.
-- **Parents of kids with IEPs.** If your child's IEP says "provide home copies of classwork and slides" — Glassroom lets you verify whether that's actually happening. Every empty description, every assignment with no attachments, every class with no due dates is visible.
-- **Parents of kids on medical leave.** Your kid can't go to school. Their teachers are supposed to provide materials remotely. Glassroom shows you whether they are.
-- **Special education advocates.** Preparing for a BSEA hearing or IEP meeting? Glassroom gives you timestamped, structured data showing exactly what was and wasn't provided. Export to CSV, hand it to your attorney.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sageframe-dharma/glassroom-web/main/images/hero.png" alt="Glassroom dashboard" width="800">
+</p>
 
 ---
 
-## Quick Start
+Google Classroom was designed for teachers, not parents. There's no cross-class view, no way to see what's due across all your kid's classes at once, and no way to tell whether an assignment came with actual instructions or just a title.
+
+Glassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. One dashboard. Every Glassroom fi assignG mGlaingGlassroom fixes this. One dashboiewGlassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. One dashpulls alGlassroom fcs, SlidGlassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. One dashboard. Every Glassroom fi assignG mGlaingGlassroom fixes this. tiGlassroom fixes this. One dashboard. Every Glassroom fi assignGlassroom fixes this. nges are Glassroom fixes this. One dashboard. Every Glassroom fi assignGlassrooix classesGlassroom fixes tnt teachers
+- **Parents of kids with IEPs** — verify whether accommodations involving materials and instructions are actually being honored
+- **Parents of kids on medical leave** — confirm teachers are posting materials remotely
+- **Special education advocates** — export structured, timestamped data for IEP meetings or BSEA hearings
+
+---
+
+## Install
 
 ### Requirements
 
-- [Docker Desktop](https://www.docker.com/get-started/) (Mac, Windows, or Linux)
+[Docker Desktop](https://www.docker.com/get-started/) — Mac or Windows. That's it.
 
-### Install and run
-
-```bash
-# 1. Download the project
-git clone https://github.com/sageframe-no-kaji/glassroom.git
-cd glassroom
-
-# 2. Start Glassroom
-docker compose up --build
-
-# 3. Open your browser
-open http://localhost:3000
-```
-
-The first time you run it, Glassroom will walk you through a short setup:
-
-1. **Log in** — click "Open login browser" in the setup flow. A new tab opens with a Chrome window — sign in to your kid's school Google account. When Glassroom detects the login, the tab closes and the setup page continues automatically.
-2. **Select classes** — pick which classes to track.
-3. **Scrape** — Glassroom pulls all assignments in the background.
-4. **Done** — you're taken to the dashboard.
-
-After the first setup, everything runs headlessly. You can trigger a new scrape any time from the nav bar.
-
-### Logging in (more detail)
-
-Glassroom uses browser automation (Playwright) to log into Google Classroom on your behalf. It never stores your password — it saves the browser session the same way Chrome does.
-
-During setup, click **Open login browser**. A new tab opens showing a real Chrome window running inside the container. Sign in to Google with your kid's school account. When Glassroom detects that you've reached the Classroom homepage, the tab closes automatically and setup continues.
-
-You only need to do this once. The session persists across container restarts.
-
-### Data persistence
-
-All data is stored in the `data/` folder and persists across container restarts:
-
-```
-data/
-├── classroom.db      — all assignments (SQLite)
-├── config.json       — your class selections and settings
-└── downloads/        — downloaded PDFs, organized by class
-```
-
-The Google login session is stored separately in a Docker named volume (`glassroom-session`) and is never accessible from the host filesystem.
-
-### Stopping and restarting
+### Two commands
 
 ```bash
-# Stop
-docker compose down
+curl -O https://raw.githubusercontent.com/sageframe-no-kaji/glassroom/main/docker-compose.yml
+docker compose up -d
+```
 
-# Restart (data is preserved)
-docker compose up
+Then open **http://localhost:3000**.
 
-# Full reset (removes all data and session)
-docker compose down -v
-rm -rf data/
+Glassroom pulls the pre-built image from GitHub Container Registry — no building, no Python, no source code needed.
+
+### First-run setup (~2 minutes)
+
+1. **Log in** — click "Open login browser." A tab opens showing a Chrome window inside the container. Sign in with your kid's school Google account. When Glassroom detects the Classroom homepage, the tab closes and setup continues.
+2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.sroom pulls all assign2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2un2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2 in a `data/` folder created next to your `2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.QLit2.2.2.2.2─ config.json       — class selections and settings
+└── downloads/        — PDFs organized by class
+```
+
+The Google sessThn iThe Google sessThn iThe Google ses(`glThe Google sessThn iThe Google sessThn iThe Google ses(`glThe Google sessThn iThe Google sessThn iThe Google ses(` downThe Google sessThn iThe Googld)
+docker compose up -d       # restart
+docker compose down -v     # full reset — removes session
+rm -rf data/               # remove database and downloads
+```
+
+---
+
+## Updates
+
+When a new version is released, pull and restart:
+
+```bash
+docker compose pull
+docker compose up -d
 ```
 
 ---
 
 ## Running without Docker
-
-If you're comfortable with Python:
 
 ```bash
 python -m venv .venv
@@ -102,18 +80,16 @@ playwright install chromium
 PYTHONPATH=. python src/app.py
 ```
 
-Open http://localhost:3000.
-
 ---
 
 ## What it reveals
 
-Google Classroom doesn't enforce any consistency across teachers. Some post detailed weekly plans with clear due dates and attached rubrics. Others post a one-word title with no instructions, no attachments, no due date — and then grade students on work they were never given the tools to complete.
+Some teachers post 140 structured assignments with due dates, rubrics, and attachments. Others post 61 with nothing — same school, same kid. Glassroom makes the difference visible, class by class, assignment by assignment.
 
-If your kid has an IEP, Glassroom makes it easy to verify whether accommodations involving materials, instructions, or home copies are actually being honored — class by class, assignment by assignment.
+If your child has an IEP that requires home copies of classwork and slides, Glassroom shows you whether that's actually happening. Every empty description, every attachment-free assignment, every class with no due dates — all visible, all exportable.
 
 ---
 
 ## License
 
-MIT
+MIT — built by a parent who needed it, shared with every parent who needs it too.
