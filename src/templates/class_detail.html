@@ -35,6 +35,7 @@
     </thead>
     <tbody>
       {% for a in assignments %}
+      {% set att_count = count_attachments(a.attachment_links) %}
       <tr>
         <td>
           <a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a>
@@ -49,18 +50,9 @@
         <td>{{ a.points_possible or '—' }}</td>
         <td>{{ a.grade or '—' }}</td>
         <td>{% if a.turn_in_required %}<span class="turn-in-badge">yes</span>{% endif %}</td>
-        <td style="font-size:0.8rem">
-          {% if a.attachment_titles %}
-            {% set titles = a.attachment_titles.split('\n') %}
-            {% set links = (a.attachment_links or '').split('\n') %}
-            {% for i in range(titles | length) %}
-              {% set t = titles[i].strip() %}
-              {% set l = links[i].strip() if i < links | length else '' %}
-              {% if t %}
-                <span class="attach-type">{{ l | attachment_type if l else '' }}</span>{% if l %}<a href="{{ l }}" target="_blank" rel="noopener">{{ t }}</a>{% else %}{{ t }}{% endif %}
-                {% if not loop.last %}<br>{% endif %}
-              {% endif %}
-            {% endfor %}
+        <td class="nowrap">
+          {% if att_count %}
+          <button class="attach-toggle" onclick="toggleAttach({{ a.id }})" type="button">📎 {{ att_count }}</button>
           {% else %}—{% endif %}
         </td>
         <td>
@@ -83,6 +75,24 @@
           </select>
         </td>
       </tr>
+      {% if att_count %}
+      <tr id="attach-panel-{{ a.id }}" class="attach-panel" style="display:none">
+        <td colspan="11">
+          <div class="attach-list">
+            {% for l in (a.attachment_links or '').split('\n') if l.strip() %}
+            {% set tlist = (a.attachment_titles or '').split('\n') %}
+            {% set ttl = tlist[loop.index0].strip() if loop.index0 < tlist | length else '' %}
+            <div class="attach-item">
+              <span class="attach-type">{{ l | attachment_type }}</span>
+              <a href="{{ l }}" target="_blank" rel="noopener">{{ ttl or l }}</a>
+            </div>
+            {% endfor %}
+          </div>
+          {% set pdf_url = pdf_url_for_assignment(a.class_name, a.posted_date, a.title) %}
+          {% if pdf_url %}<div class="attach-pdf"><a href="{{ pdf_url }}" target="_blank" rel="noopener">📎 View downloaded copy</a></div>{% endif %}
+        </td>
+      </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>

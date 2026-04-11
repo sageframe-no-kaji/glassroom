@@ -26,7 +26,12 @@ def create_app() -> Flask:
     app.register_blueprint(settings_bp)
 
     # Serve downloaded PDFs from the downloads/ folder
-    from src.downloader import DOWNLOADS_DIR, attachment_type
+    from src.downloader import (
+        DOWNLOADS_DIR,
+        _class_folder_slug,
+        _make_pdf_filename,
+        attachment_type,
+    )
 
     @app.route("/files/<path:filename>")
     def serve_download(filename: str) -> Response:
@@ -34,6 +39,29 @@ def create_app() -> Flask:
 
     # Jinja filter so templates can call {{ url | attachment_type }}
     app.jinja_env.filters["attachment_type"] = attachment_type
+
+    # Jinja global: count non-empty attachment links in a newline-separated string
+    def _count_attachments(links_str: object) -> int:
+        if not links_str:
+            return 0
+        return len([ln for ln in str(links_str).split("\n") if ln.strip()])
+
+    app.jinja_env.globals["count_attachments"] = _count_attachments
+
+    # Jinja global: return /files/ URL for a downloaded assignment PDF, or None
+    def _pdf_url_for_assignment(
+        class_name: object, posted_date: object, title: object
+    ) -> str | None:
+        cs = str(class_name or "")
+        pd = str(posted_date) if posted_date else None
+        t = str(title or "")
+        if not cs and not t:
+            return None
+        filename = _make_pdf_filename(pd, t)
+        path = DOWNLOADS_DIR / _class_folder_slug(cs) / filename
+        return f"/files/{_class_folder_slug(cs)}/{filename}" if path.exists() else None
+
+    app.jinja_env.globals["pdf_url_for_assignment"] = _pdf_url_for_assignment
 
     return app
 

@@ -720,3 +720,54 @@ progress::-moz-progress-bar {
     padding: 0 3pt;
   }
 }
+
+/* ====================================================================
+   Attachment toggle + expand panel
+   ==================================================================== */
+
+.attach-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--blue-dark);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-family: var(--font);
+  line-height: 1.6;
+}
+
+.attach-toggle:hover {
+  background: var(--border-light);
+}
+
+.attach-panel > td {
+  background: #F5F8FF;
+  border-top: none;
+  padding: 0.5rem 0.875rem 0.7rem 2.5rem;
+}
+
+.attach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+
+.attach-item {
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.attach-pdf {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.attach-pdf a {
+  color: var(--text-muted);
+}

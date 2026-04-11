@@ -120,3 +120,11 @@ function scrollToClass(encodedName) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
+
+// ---- Attachment panel expand/collapse ----
+
+function toggleAttach(id) {
+  var panel = document.getElementById('attach-panel-' + id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}

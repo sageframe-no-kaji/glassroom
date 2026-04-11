@@ -33,6 +33,10 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
         if total
         else 0
     )
+    attach_count = sum(
+        len([ln for ln in (str(a.attachment_links) if a.attachment_links else "").split("\n") if ln.strip()])
+        for a in assignments
+    )
     return {
         "total": total,
         "done": done,
@@ -41,6 +45,7 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
         "graded": graded,
         "pct_due": pct_due,
         "pct_attach": pct_attach,
+        "attach_count": attach_count,
     }
 
 

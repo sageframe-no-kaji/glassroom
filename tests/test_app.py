@@ -42,6 +42,12 @@ def _make_app(engine):
     from src.routes.api import bp as api_bp
     from src.routes.setup import bp as setup_bp
     from src.routes.settings import bp as settings_bp
+    from src.downloader import (
+        DOWNLOADS_DIR,
+        _class_folder_slug,
+        _make_pdf_filename,
+        attachment_type,
+    )
 
     template_dir = str(_PROJECT_ROOT / "src" / "templates")
     static_dir = str(_PROJECT_ROOT / "src" / "static")
@@ -51,6 +57,29 @@ def _make_app(engine):
     a.register_blueprint(api_bp)
     a.register_blueprint(setup_bp)
     a.register_blueprint(settings_bp)
+
+    # Mirror Jinja filters/globals from create_app
+    a.jinja_env.filters["attachment_type"] = attachment_type
+
+    def _count_attachments(links_str: object) -> int:
+        if not links_str:
+            return 0
+        return len([ln for ln in str(links_str).split("\n") if ln.strip()])
+
+    def _pdf_url_for_assignment(
+        class_name: object, posted_date: object, title: object
+    ) -> str | None:
+        cs = str(class_name or "")
+        pd = str(posted_date) if posted_date else None
+        t = str(title or "")
+        if not cs and not t:
+            return None
+        filename = _make_pdf_filename(pd, t)
+        path = DOWNLOADS_DIR / _class_folder_slug(cs) / filename
+        return f"/files/{_class_folder_slug(cs)}/{filename}" if path.exists() else None
+
+    a.jinja_env.globals["count_attachments"] = _count_attachments
+    a.jinja_env.globals["pdf_url_for_assignment"] = _pdf_url_for_assignment
     return a
 
 
@@ -418,3 +447,99 @@ class TestExportCsv:
         text = resp.data.decode()
         assert "Missing HW" in text
         assert "Assigned HW" not in text
+
+
+# ---------------------------------------------------------------------------
+# Ho 5.1 — Attachment Visibility
+# ---------------------------------------------------------------------------
+
+
+class TestAttachVisibility:
+    def test_class_stats_attach_count_sums_links(self):
+        """_class_stats.attach_count counts individual links across assignments."""
+        from src.routes.dashboard import _class_stats
+
+        a1 = Assignment(
+            assignment_url="https://example.com/a/v1",
+            class_name="Math",
+            title="HW 1",
+            status="Assigned",
+            attachment_links="https://docs.google.com/d1\nhttps://docs.google.com/d2",
+        )
+        a2 = Assignment(
+            assignment_url="https://example.com/a/v2",
+            class_name="Math",
+            title="HW 2",
+            status="Assigned",
+            attachment_links="https://docs.google.com/d3",
+        )
+        a3 = Assignment(
+            assignment_url="https://example.com/a/v3",
+            class_name="Math",
+            title="HW 3",
+            status="Assigned",
+            attachment_links="",
+        )
+        stats = _class_stats([a1, a2, a3])
+        assert stats["attach_count"] == 3
+
+    def test_class_stats_attach_count_handles_none(self):
+        """_class_stats.attach_count treats None attachment_links as 0."""
+        from src.routes.dashboard import _class_stats
+
+        a = Assignment(
+            assignment_url="https://example.com/a/v4",
+            class_name="Math",
+            title="HW",
+            status="Assigned",
+            attachment_links=None,
+        )
+        stats = _class_stats([a])
+        assert stats["attach_count"] == 0
+
+    def test_dashboard_has_attach_column_header(self, client, engine):
+        """Dashboard renders the Attach column header."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert b"Attach" in resp.data
+
+    def test_dashboard_shows_attach_toggle_when_links_present(self, client, engine):
+        """Dashboard shows paperclip toggle button when assignment has attachments."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(
+                s,
+                attachment_links="https://docs.google.com/document/d/abc",
+                attachment_titles="My Doc",
+            )
+        resp = client.get("/")
+        assert b"attach-toggle" in resp.data
+
+    def test_dashboard_shows_dash_when_no_attachments(self, client, engine):
+        """Dashboard shows em-dash in Attach cell when no attachments."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, attachment_links="")
+        resp = client.get("/")
+        assert b"attach-toggle" not in resp.data
+
+    def test_class_detail_has_attach_column_header(self, client, engine):
+        """Class detail view renders Attach column header."""
+        with get_session(engine) as s:
+            _make_assignment(s, class_name="English")
+        resp = client.get("/class/English")
+        assert resp.status_code == 200
+        assert b"Attach" in resp.data
+
+    def test_todo_has_attach_column_header(self, client, engine):
+        """To Do view renders Attach column header."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, turn_in_required=True, status="Assigned")
+        resp = client.get("/todo")
+        assert resp.status_code == 200
+        assert b"Attach" in resp.data
+

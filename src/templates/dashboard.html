@@ -30,6 +30,10 @@
         </div>
         <div class="stat-card-item {% if cls.stats.pct_attach == 0 %}stat-zero{% endif %}">
           <span class="stat-card-val">{{ cls.stats.pct_attach }}%</span>
+          <span class="stat-card-lbl">% w/&nbsp;attach</span>
+        </div>
+        <div class="stat-card-item {% if cls.stats.attach_count == 0 %}stat-zero{% endif %}">
+          <span class="stat-card-val">{{ cls.stats.attach_count }}</span>
           <span class="stat-card-lbl">attachments</span>
         </div>
         <div class="stat-card-item {% if cls.stats.graded == 0 %}stat-zero{% else %}stat-done{% endif %}">
@@ -77,10 +81,12 @@
               <th>Points</th>
               <th>Grade</th>
               <th>Turn in?</th>
+              <th>Attach</th>
             </tr>
           </thead>
           <tbody>
             {% for a in cls.assignments %}
+            {% set att_count = count_attachments(a.attachment_links) %}
             <tr>
               <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
               <td class="nowrap">{{ a.posted_date or '—' }}</td>
@@ -89,7 +95,30 @@
               <td>{{ a.points_possible or '—' }}</td>
               <td>{{ a.grade or '—' }}</td>
               <td>{% if a.turn_in_required %}<span class="turn-in-badge">yes</span>{% endif %}</td>
+              <td class="nowrap">
+                {% if att_count %}
+                <button class="attach-toggle" onclick="toggleAttach({{ a.id }})" type="button">📎 {{ att_count }}</button>
+                {% else %}—{% endif %}
+              </td>
             </tr>
+            {% if att_count %}
+            <tr id="attach-panel-{{ a.id }}" class="attach-panel" style="display:none">
+              <td colspan="8">
+                <div class="attach-list">
+                  {% for l in (a.attachment_links or '').split('\n') if l.strip() %}
+                  {% set tlist = (a.attachment_titles or '').split('\n') %}
+                  {% set ttl = tlist[loop.index0].strip() if loop.index0 < tlist | length else '' %}
+                  <div class="attach-item">
+                    <span class="attach-type">{{ l | attachment_type }}</span>
+                    <a href="{{ l }}" target="_blank" rel="noopener">{{ ttl or l }}</a>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% set pdf_url = pdf_url_for_assignment(a.class_name, a.posted_date, a.title) %}
+                {% if pdf_url %}<div class="attach-pdf"><a href="{{ pdf_url }}" target="_blank" rel="noopener">📎 View downloaded copy</a></div>{% endif %}
+              </td>
+            </tr>
+            {% endif %}
             {% endfor %}
           </tbody>
         </table>
