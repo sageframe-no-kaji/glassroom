@@ -540,6 +540,18 @@ a:hover { text-decoration: underline; }
   font-size: 0.8rem;
 }
 
+.btn-support {
+  font-size: 1rem;
+  text-decoration: none;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+
+.btn-support:hover {
+  opacity: 1;
+}
+
 /* ---- Dashboard filter bar ---- */
 .filter-bar {
   margin: 0.5rem 0 1rem;
