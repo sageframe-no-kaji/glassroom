@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Glassroom{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/svg+xml" href="/static/glass-48.svg">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
 <nav>
-  <span class="brand">Glassroom</span>
+  <span class="brand"><img src="/static/glass-48.svg" alt="" class="nav-logo">Glassroom</span>
   <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Dashboard</a>
   <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}>To Do</a>
   <a href="/downloads" {% if request.path == '/downloads' %}class="active"{% endif %}>Downloads</a>

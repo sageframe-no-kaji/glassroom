@@ -79,6 +79,15 @@ nav a.active { color: #fff; }
   color: #fff;
   letter-spacing: -0.01em;
   margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nav-logo {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
 .spacer { flex: 1; }
