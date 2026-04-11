@@ -1,5 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Glassroom{% endblock %}
+
+{% block nav_badges %}
+{% if new_count or updated_count %}
+  <span class="nav-since-scrape">
+    {% if new_count %}<span class="nav-badge nav-badge-new">{{ new_count }} new</span>{% endif %}
+    {% if updated_count %}<span class="nav-badge nav-badge-updated">{{ updated_count }} updated</span>{% endif %}
+    <span class="nav-badge-label">since last scrape</span>
+  </span>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 
 <div class="page-header">
@@ -74,6 +85,9 @@
     <button class="btn btn-filter" data-filter="no-attach" onclick="setDashFilter('no-attach')">No Attachments</button>
     <button class="btn btn-filter" data-filter="never-graded" onclick="setDashFilter('never-graded')">Never Graded</button>
     <button class="btn btn-filter" data-filter="back-posted" onclick="setDashFilter('back-posted')">Back-posted</button>
+    {% if new_count or updated_count %}
+    <button class="btn btn-filter" data-filter="whats-new" onclick="setDashFilter('whats-new')">What's new</button>
+    {% endif %}
   </div>
 
   {% for cls in classes %}
@@ -113,14 +127,21 @@
             {% for a in cls.assignments %}
             {% set att_count = count_attachments(a.attachment_links) %}
             {% set bp_flag = back_post_flag(a.posted_date, a.due_date) %}
+            {% set is_new = prev_scrape_ts and a.first_seen_at and a.first_seen_at > prev_scrape_ts %}
+            {% set is_updated = prev_scrape_ts and a.last_modified_at and a.last_modified_at > prev_scrape_ts and (not a.first_seen_at or a.first_seen_at <= prev_scrape_ts) %}
             <tr class="assignment-row"
                 data-id="{{ a.id }}"
                 data-no-due="{{ '1' if not a.due_date else '0' }}"
                 data-no-attach="{{ '1' if not a.attachment_links else '0' }}"
                 data-ungraded="{{ '1' if a.status != 'Graded' else '0' }}"
-                data-backposted="{{ bp_flag }}">
+                data-backposted="{{ bp_flag }}"
+                data-is-new="{{ '1' if is_new else '0' }}"
+                data-is-updated="{{ '1' if is_updated else '0' }}">
               <td>
                 <a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a>
+                {% if is_new %}<span class="scrape-badge scrape-new">NEW</span>
+                {% elif is_updated %}<span class="scrape-badge scrape-updated">UPDATED</span>
+                {% endif %}
                 {% if bp_flag == 'after' %}<span class="backpost-badge backpost-after">⚠ Posted after deadline</span>
                 {% elif bp_flag == 'same' %}<span class="backpost-badge backpost-same">Posted same day as due</span>
                 {% endif %}
@@ -177,7 +198,8 @@ function setDashFilter(f) {
     'no-due': function(tr) { return tr.dataset.noDue === '1'; },
     'no-attach': function(tr) { return tr.dataset.noAttach === '1'; },
     'never-graded': function(tr) { return tr.dataset.ungraded === '1'; },
-    'back-posted': function(tr) { return tr.dataset.backposted === 'after' || tr.dataset.backposted === 'same'; }
+    'back-posted': function(tr) { return tr.dataset.backposted === 'after' || tr.dataset.backposted === 'same'; },
+    'whats-new': function(tr) { return tr.dataset.isNew === '1' || tr.dataset.isUpdated === '1'; }
   };
   var test = predicates[f] || predicates['all'];
   document.querySelectorAll('details[data-class-idx]').forEach(function(det) {

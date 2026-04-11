@@ -9,7 +9,7 @@ from flask import Blueprint, current_app, redirect, render_template, url_for
 
 from src.db import get_session
 from src.downloader import DOWNLOADS_DIR, attachment_type
-from src.models import Assignment, SelectedClass
+from src.models import Assignment, SelectedClass, ScrapeLog
 from src.classroom import SESSION_DIR
 
 bp = Blueprint("dashboard", __name__)
@@ -110,6 +110,16 @@ def dashboard() -> str:
         assignments = session.query(Assignment).order_by(Assignment.class_name).all()
         # Build lookup: class_name → archived flag
         selected_classes = session.query(SelectedClass).all()
+        # Two most recent scrapes — second-to-last is the "previous" threshold
+        scrape_logs = (
+            session.query(ScrapeLog)
+            .order_by(ScrapeLog.timestamp.desc())
+            .limit(2)
+            .all()
+        )
+
+    # prev_scrape_ts: second-to-last scrape ISO timestamp (None if < 2 scrapes)
+    prev_scrape_ts: str | None = cast(str, scrape_logs[1].timestamp) if len(scrape_logs) >= 2 else None
 
     # Session validity — quick file-system check, no Playwright overhead
     session_valid = SESSION_DIR.exists() and any(SESSION_DIR.iterdir())
@@ -139,7 +149,29 @@ def dashboard() -> str:
 
     classes = active_classes + archived_classes
 
-    return render_template("dashboard.html", classes=classes, session_valid=session_valid)
+    # Counts for the nav badge
+    def _is_new(a: Assignment) -> bool:
+        return bool(prev_scrape_ts and a.first_seen_at and cast(str, a.first_seen_at) > prev_scrape_ts)
+
+    def _is_updated(a: Assignment) -> bool:
+        return bool(
+            prev_scrape_ts
+            and a.last_modified_at
+            and cast(str, a.last_modified_at) > prev_scrape_ts
+            and (not a.first_seen_at or cast(str, a.first_seen_at) <= prev_scrape_ts)
+        )
+
+    new_count = sum(1 for a in assignments if _is_new(a))
+    updated_count = sum(1 for a in assignments if _is_updated(a))
+
+    return render_template(
+        "dashboard.html",
+        classes=classes,
+        session_valid=session_valid,
+        prev_scrape_ts=prev_scrape_ts,
+        new_count=new_count,
+        updated_count=updated_count,
+    )
 
 
 @bp.route("/class/<path:class_name>")

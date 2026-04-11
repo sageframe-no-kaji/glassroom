@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 
 from src.app import create_app
 from src.db import init_db, get_session
-from src.models import Assignment, SelectedClass
+from src.models import Assignment, SelectedClass, ScrapeLog
 
 _PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -115,6 +115,21 @@ def _make_selected_class(session, name="Math", course_url="https://classroom.goo
     session.add(sc)
     session.commit()
     return sc
+
+
+def _make_scrape_log(session, timestamp: str) -> ScrapeLog:
+    """Insert a ScrapeLog entry with the given ISO timestamp."""
+    log = ScrapeLog(
+        timestamp=timestamp,
+        classes_scraped=1,
+        assignments_inserted=0,
+        assignments_updated=0,
+        assignments_unchanged=1,
+    )
+    session.add(log)
+    session.commit()
+    return log
+
 
 
 # ---------------------------------------------------------------------------
@@ -791,6 +806,127 @@ class TestBackPostFlag:
             _make_assignment(s, posted_date="2026-04-20", due_date="2026-05-01")
         resp = client.get("/")
         assert b'data-backposted=""' in resp.data
+
+
+# ---------------------------------------------------------------------------
+# Ho 5.6 — "New Since Last Scrape" Badges
+# ---------------------------------------------------------------------------
+
+
+class TestNewSinceLastScrape:
+    def test_no_badge_without_two_scrapes(self, client, engine):
+        """No NEW badge shown when there's only one scrape log (nothing to compare to)."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, first_seen_at="2026-04-11T12:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T12:00:00+00:00")
+        resp = client.get("/")
+        assert b">NEW<" not in resp.data
+
+    def test_new_badge_shown_for_recent_assignment(self, client, engine):
+        """Assignment with first_seen_at after previous scrape shows NEW badge."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-11T10:00:00+00:00",
+                             last_modified_at="2026-04-11T10:00:00+00:00")
+        resp = client.get("/")
+        assert b">NEW<" in resp.data
+
+    def test_no_new_badge_for_old_assignment(self, client, engine):
+        """Assignment with first_seen_at before previous scrape gets no NEW badge."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-09T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-08T10:00:00+00:00",
+                             last_modified_at="2026-04-08T10:00:00+00:00")
+        resp = client.get("/")
+        assert b">NEW<" not in resp.data
+
+    def test_updated_badge_for_modified_old_assignment(self, client, engine):
+        """Assignment with last_modified_at after prev scrape (but old first_seen_at) shows UPDATED."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            # first seen before prev scrape, but modified after prev scrape
+            _make_assignment(s, first_seen_at="2026-04-08T10:00:00+00:00",
+                             last_modified_at="2026-04-10T12:00:00+00:00")
+        resp = client.get("/")
+        assert b">UPDATED<" in resp.data
+
+    def test_no_updated_badge_when_not_modified(self, client, engine):
+        """Assignment modified before previous scrape shows no UPDATED badge."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-08T10:00:00+00:00",
+                             last_modified_at="2026-04-09T10:00:00+00:00")
+        resp = client.get("/")
+        assert b">UPDATED<" not in resp.data
+
+    def test_nav_shows_new_count(self, client, engine):
+        """Nav area shows '2 new' when two assignments are newly seen."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, assignment_url="https://example.com/a/n1",
+                             first_seen_at="2026-04-11T10:00:00+00:00",
+                             last_modified_at="2026-04-11T10:00:00+00:00")
+            _make_assignment(s, assignment_url="https://example.com/a/n2",
+                             first_seen_at="2026-04-11T11:00:00+00:00",
+                             last_modified_at="2026-04-11T11:00:00+00:00")
+        resp = client.get("/")
+        assert b"2 new" in resp.data
+
+    def test_whats_new_filter_button_shown_when_new(self, client, engine):
+        """'What's new' filter button appears when there are new/updated assignments."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-11T10:00:00+00:00",
+                             last_modified_at="2026-04-11T10:00:00+00:00")
+        resp = client.get("/")
+        assert b"What's new" in resp.data
+
+    def test_whats_new_filter_button_hidden_when_nothing_new(self, client, engine):
+        """'What's new' filter button is absent when all assignments are old."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-09T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-08T10:00:00+00:00",
+                             last_modified_at="2026-04-08T10:00:00+00:00")
+        resp = client.get("/")
+        # The button text "What's new" is only rendered when new_count or updated_count > 0
+        assert b"What's new" not in resp.data
+
+    def test_data_is_new_attr_on_row(self, client, engine):
+        """New assignment row has data-is-new='1'."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-11T10:00:00+00:00",
+                             last_modified_at="2026-04-11T10:00:00+00:00")
+        resp = client.get("/")
+        assert b'data-is-new="1"' in resp.data
+
+    def test_data_is_updated_attr_on_row(self, client, engine):
+        """Updated assignment row has data-is-updated='1'."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_scrape_log(s, "2026-04-10T08:00:00+00:00")
+            _make_scrape_log(s, "2026-04-11T08:00:00+00:00")
+            _make_assignment(s, first_seen_at="2026-04-08T10:00:00+00:00",
+                             last_modified_at="2026-04-10T12:00:00+00:00")
+        resp = client.get("/")
+        assert b'data-is-updated="1"' in resp.data
 
 
 # ---------------------------------------------------------------------------
