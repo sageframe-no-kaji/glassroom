@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -191,7 +192,11 @@ def _previously_downloaded(
 # ---------------------------------------------------------------------------
 
 
-def do_download_attachments(config: dict[str, Any], force: bool = False) -> None:
+def do_download_attachments(
+    config: dict[str, Any],
+    force: bool = False,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> dict[str, Any]:
     from src.db import get_engine, get_session, init_db
     from src.models import Assignment
 
@@ -269,7 +274,7 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
     total = sum(len(v["assignments"]) for v in plan.values())
     if total == 0:
         print("No attachments found. Nothing to download.")
-        return
+        return {"downloaded": 0, "skipped": 0, "classes": 0}
 
     # Build the new manifest skeleton — stats are accumulated during download
     new_manifest: dict[str, Any] = {
@@ -340,6 +345,8 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
                         f"[{counter}/{total}] {class_slug}: skip — {source_url[:60]}",
                         file=sys.stderr,
                     )
+                    if on_progress:
+                        on_progress(counter, total)
                     continue
 
                 filename = _make_pdf_filename(posted_date, ass_title or att_title)
@@ -366,6 +373,8 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
                         f"[{counter}/{total}] {class_slug}: {filename} (already downloaded)",
                         file=sys.stderr,
                     )
+                    if on_progress:
+                        on_progress(counter, total)
                     continue
 
                 # Attempt download
@@ -398,6 +407,8 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
                             "file_size_bytes": size,
                         }
                     )
+                    if on_progress:
+                        on_progress(counter, total)
                     print(
                         f"[{counter}/{total}] {class_slug}: {filename} (OK)",
                         file=sys.stderr,
@@ -435,6 +446,8 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
                             "skip_reason": reason,
                         }
                     )
+                    if on_progress:
+                        on_progress(counter, total)
                     print(
                         f"[{counter}/{total}] {class_slug}: {filename} FAILED — {reason}",
                         file=sys.stderr,
@@ -451,3 +464,8 @@ def do_download_attachments(config: dict[str, Any], force: bool = False) -> None
     total_dl = sum(c["downloaded"] for c in new_manifest["classes"].values())
     total_sk = sum(c["skipped"] for c in new_manifest["classes"].values())
     print(f"Done: {total_dl} downloaded, {total_sk} skipped")
+    return {
+        "downloaded": total_dl,
+        "skipped": total_sk,
+        "classes": len(new_manifest["classes"]),
+    }

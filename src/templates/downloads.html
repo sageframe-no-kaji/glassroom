@@ -4,9 +4,11 @@
 
 <div class="page-header">
   <h1>Downloaded PDFs</h1>
-  <form action="/api/download" method="post" class="no-print" style="display:inline">
-    <button type="submit" class="btn btn-primary btn-sm">Download attachments now</button>
-  </form>
+  <button id="btn-download" class="btn btn-primary btn-sm" onclick="triggerDownload()">Download attachments</button>
+</div>
+
+<div id="download-progress" style="display:none;margin-bottom:1.25rem;padding:0.75rem 1rem;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;font-size:0.9rem">
+  <span id="download-progress-msg"><span class="spinner"></span> Starting download…</span>
 </div>
 
 {% if not pdf_tree %}
@@ -27,12 +29,35 @@
     <div class="card-body">
       <table>
         <thead>
-          <tr><th>File</th></tr>
+          <tr>
+            <th>File</th>
+            <th>Type</th>
+            <th>Size</th>
+            <th>Original</th>
+          </tr>
         </thead>
         <tbody>
           {% for pdf in pdfs %}
           <tr>
-            <td><a href="{{ pdf.url }}" target="_blank" rel="noopener">{{ pdf.name }}</a></td>
+            <td><a href="{{ pdf.url }}" target="_blank" rel="noopener">{{ pdf.label or pdf.name }}</a></td>
+            <td style="white-space:nowrap;color:#6b7280;font-size:0.85rem">
+              {% if pdf.file_type == "Doc" %}📄 Doc
+              {% elif pdf.file_type == "Slides" %}📽 Slides
+              {% elif pdf.file_type == "Sheet" %}📊 Sheet
+              {% elif pdf.file_type == "Form" %}📋 Form
+              {% elif pdf.file_type == "Drive" %}📁 Drive
+              {% elif pdf.file_type == "Video" %}▶ Video
+              {% elif pdf.file_type %}🔗 {{ pdf.file_type }}
+              {% else %}—{% endif %}
+            </td>
+            <td style="white-space:nowrap;color:#6b7280;font-size:0.85rem">{{ pdf.size_str }}</td>
+            <td>
+              {% if pdf.source_url %}
+              <a href="{{ pdf.source_url }}" target="_blank" rel="noopener" style="font-size:0.85rem">View in Google ↗</a>
+              {% elif pdf.assignment_url %}
+              <a href="{{ pdf.assignment_url }}" target="_blank" rel="noopener" style="font-size:0.85rem">View assignment ↗</a>
+              {% else %}—{% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -59,4 +84,60 @@
   {% endfor %}
 {% endif %}
 
+<script>
+function triggerDownload() {
+  var btn = document.getElementById('btn-download');
+  var wrap = document.getElementById('download-progress');
+  var msg = document.getElementById('download-progress-msg');
+  btn.disabled = true;
+  wrap.style.display = 'block';
+  msg.innerHTML = '<span class="spinner"></span> Starting download\u2026';
+
+  fetch('/api/download', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        msg.style.color = '#dc2626';
+        msg.textContent = '\u26a0 ' + data.error;
+        btn.disabled = false;
+        return;
+      }
+      pollDownload(btn, msg);
+    })
+    .catch(function(err) {
+      msg.style.color = '#dc2626';
+      msg.textContent = '\u26a0 ' + String(err);
+      btn.disabled = false;
+    });
+}
+
+function pollDownload(btn, msg) {
+  setTimeout(function() {
+    fetch('/api/download/status')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.status === 'done') {
+          msg.style.color = '#166534';
+          msg.textContent = '\u2713 Done \u2014 ' + (data.downloaded || 0) + ' downloaded, '
+            + (data.skipped || 0) + ' skipped across ' + (data.classes || 0) + ' classes.';
+          btn.disabled = false;
+          setTimeout(function() { location.reload(); }, 2000);
+        } else if (data.status === 'error') {
+          msg.style.color = '#dc2626';
+          msg.textContent = '\u26a0 Download failed: ' + (data.error || 'unknown error');
+          btn.disabled = false;
+        } else if (data.running || data.status === 'starting' || data.status === 'running') {
+          var done = data.files_done || 0;
+          var total = data.files_total || 0;
+          var progress = total > 0 ? ' ' + done + '/' + total + ' complete' : '\u2026';
+          msg.innerHTML = '<span class="spinner"></span> Downloading attachments' + progress;
+          pollDownload(btn, msg);
+        } else {
+          btn.disabled = false;
+        }
+      })
+      .catch(function() { pollDownload(btn, msg); });
+  }, 2000);
+}
+</script>
 {% endblock %}

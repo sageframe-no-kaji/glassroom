@@ -255,6 +255,52 @@ class TestDownloads:
         assert b"homework.pdf" in resp.data
         assert b"stray-file.pdf" not in resp.data
 
+    def test_shows_file_size(self, client, tmp_path, monkeypatch):
+        """Downloads page shows formatted file size for each PDF."""
+        class_dir = tmp_path / "math"
+        class_dir.mkdir()
+        (class_dir / "hw.pdf").write_bytes(b"x" * 2048)
+        import src.routes.dashboard as dash_mod
+        monkeypatch.setattr(dash_mod, "DOWNLOADS_DIR", tmp_path)
+        resp = client.get("/downloads")
+        # 2048 bytes → "2 KB" in the page
+        assert b"2 KB" in resp.data
+
+    def test_shows_type_column_header(self, client, tmp_path, monkeypatch):
+        class_dir = tmp_path / "math"
+        class_dir.mkdir()
+        (class_dir / "hw.pdf").write_bytes(b"x" * 512)
+        import src.routes.dashboard as dash_mod
+        monkeypatch.setattr(dash_mod, "DOWNLOADS_DIR", tmp_path)
+        resp = client.get("/downloads")
+        assert b"Type" in resp.data
+
+    def test_download_button_not_form_post(self, client):
+        """Button on downloads page must not be a plain form-POST (raw JSON bug)."""
+        resp = client.get("/downloads")
+        assert b'action="/api/download"' not in resp.data
+        assert b'triggerDownload' in resp.data
+
+
+# ---------------------------------------------------------------------------
+# Ho 5.2 — _fmt_size helper
+# ---------------------------------------------------------------------------
+
+
+class TestFmtSize:
+    def test_bytes(self):
+        from src.routes.dashboard import _fmt_size
+        assert _fmt_size(512) == "512 B"
+
+    def test_kilobytes(self):
+        from src.routes.dashboard import _fmt_size
+        assert _fmt_size(2048) == "2 KB"
+
+    def test_megabytes(self):
+        from src.routes.dashboard import _fmt_size
+        result = _fmt_size(2 * 1024 * 1024)
+        assert "2.0 MB" in result
+
 
 # ---------------------------------------------------------------------------
 # API — PATCH /api/assignment/<id>
@@ -696,4 +742,69 @@ class TestBaserowUnconfigured:
         monkeypatch.setattr("src.config.load_settings", lambda: {})
         resp = client.post("/api/baserow/export")
         assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Ho 5.2 — Download status endpoint + 409 when already running
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadStatus:
+    def test_returns_status_key(self, client):
+        resp = client.get("/api/download/status")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "status" in data
+        assert "running" in data
+
+    def test_initial_status_is_idle(self, client, monkeypatch):
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_download_state", {
+            "running": False,
+            "status": "idle",
+            "files_done": 0,
+            "files_total": 0,
+            "downloaded": 0,
+            "skipped": 0,
+            "classes": 0,
+            "completed_at": None,
+            "error": None,
+        })
+        data = client.get("/api/download/status").get_json()
+        assert data["status"] == "idle"
+        assert data["running"] is False
+
+    def test_trigger_returns_409_when_already_running(self, client, monkeypatch):
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_download_state", {
+            "running": True,
+            "status": "running",
+            "files_done": 5,
+            "files_total": 20,
+            "downloaded": 0,
+            "skipped": 0,
+            "classes": 0,
+            "completed_at": None,
+            "error": None,
+        })
+        resp = client.post("/api/download")
+        assert resp.status_code == 409
+
+    def test_done_state_has_counts(self, client, monkeypatch):
+        import src.routes.api as api_mod
+        monkeypatch.setattr(api_mod, "_download_state", {
+            "running": False,
+            "status": "done",
+            "files_done": 10,
+            "files_total": 10,
+            "downloaded": 8,
+            "skipped": 2,
+            "classes": 3,
+            "completed_at": "2026-04-11T12:00:00Z",
+            "error": None,
+        })
+        data = client.get("/api/download/status").get_json()
+        assert data["downloaded"] == 8
+        assert data["skipped"] == 2
+        assert data["classes"] == 3
 

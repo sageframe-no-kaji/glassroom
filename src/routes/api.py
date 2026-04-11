@@ -28,6 +28,23 @@ _scrape_state: dict[str, Any] = {
 }
 
 # ---------------------------------------------------------------------------
+# Download progress state
+# ---------------------------------------------------------------------------
+
+_download_lock = threading.Lock()
+_download_state: dict[str, Any] = {
+    "running": False,
+    "status": "idle",
+    "files_done": 0,
+    "files_total": 0,
+    "downloaded": 0,
+    "skipped": 0,
+    "classes": 0,
+    "completed_at": None,
+    "error": None,
+}
+
+# ---------------------------------------------------------------------------
 # Login + class discovery state
 # ---------------------------------------------------------------------------
 
@@ -197,22 +214,61 @@ def scrape_status() -> Response:
 
 # ---------------------------------------------------------------------------
 # POST /api/download — trigger PDF download in background thread
+# GET  /api/download/status — poll progress
 # ---------------------------------------------------------------------------
 
 
 @bp.route("/download", methods=["POST"])
 def trigger_download() -> Response:
+    with _download_lock:
+        if _download_state["running"]:
+            return jsonify({"error": "Download already running"}), 409  # type: ignore[return-value]
     _start_download()
     return jsonify({"ok": True, "message": "Download started"})
 
 
+@bp.route("/download/status")
+def download_status() -> Response:
+    with _download_lock:
+        state = dict(_download_state)
+    return jsonify(state)
+
+
 def _start_download() -> None:
-    """Spawn the download thread. Safe to call from another background thread."""
+    """Spawn the download thread and update _download_state. Safe to call from another background thread."""
+    with _download_lock:
+        _download_state["running"] = True
+        _download_state["status"] = "starting"
+        _download_state["files_done"] = 0
+        _download_state["files_total"] = 0
+        _download_state["error"] = None
+        _download_state["completed_at"] = None
+
+    def _on_progress(done: int, total: int) -> None:
+        with _download_lock:
+            _download_state["files_done"] = done
+            _download_state["files_total"] = total
+            _download_state["status"] = "running"
+
     def _run() -> None:
         from src.config import load_config
         from src.downloader import do_download_attachments
-        config = load_config()
-        do_download_attachments(config)
+        try:
+            config = load_config()
+            result = do_download_attachments(config, on_progress=_on_progress)
+            with _download_lock:
+                _download_state["status"] = "done"
+                _download_state["downloaded"] = (result or {}).get("downloaded", 0)
+                _download_state["skipped"] = (result or {}).get("skipped", 0)
+                _download_state["classes"] = (result or {}).get("classes", 0)
+                _download_state["completed_at"] = datetime.now(timezone.utc).isoformat()
+        except Exception as exc:
+            with _download_lock:
+                _download_state["status"] = "error"
+                _download_state["error"] = str(exc)
+        finally:
+            with _download_lock:
+                _download_state["running"] = False
 
     threading.Thread(target=_run, daemon=True).start()
 

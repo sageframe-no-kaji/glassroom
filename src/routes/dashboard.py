@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from flask import Blueprint, current_app, redirect, render_template, url_for
 
 from src.db import get_session
-from src.downloader import DOWNLOADS_DIR
+from src.downloader import DOWNLOADS_DIR, attachment_type
 from src.models import Assignment, SelectedClass
 from src.classroom import SESSION_DIR
 
@@ -52,6 +52,15 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int]:
 def _sort_key(a: Assignment) -> tuple[str, str]:
     """Sort assignments: soonest due_date first, then posted_date."""
     return (str(a.due_date or "9999-99-99"), str(a.posted_date or "9999-99-99"))
+
+
+def _fmt_size(size_bytes: int) -> str:
+    """Format byte count as human-readable string."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.0f} KB"
+    return f"{size_bytes / (1024 * 1024):.1f} MB"
 
 
 @bp.route("/")
@@ -150,15 +159,27 @@ def downloads() -> str:
     """List downloaded PDFs organised by class folder."""
     from src.downloader import _load_manifest
 
-    pdf_tree: dict[str, list[dict[str, str]]] = {}
+    manifest = _load_manifest(DOWNLOADS_DIR) if DOWNLOADS_DIR.is_dir() else {}
+
+    # Build manifest lookup: class_slug → filename → file_entry
+    manifest_lookup: dict[str, dict[str, Any]] = {}
+    for cls_slug, cls_data in manifest.get("classes", {}).items():
+        manifest_lookup[cls_slug] = {
+            f["filename"]: f
+            for f in cls_data.get("files", [])
+            if f.get("filename")
+        }
+
+    pdf_tree: dict[str, list[dict[str, Any]]] = {}
 
     if DOWNLOADS_DIR.is_dir():
         for class_dir in sorted(DOWNLOADS_DIR.iterdir()):
             if not class_dir.is_dir():
                 continue
+            cls_mf = manifest_lookup.get(class_dir.name, {})
             pdfs = sorted(
                 [
-                    {"name": f.name, "url": f"/files/{class_dir.name}/{f.name}"}
+                    _enrich_pdf_entry(f, cls_mf.get(f.name, {}))
                     for f in class_dir.iterdir()
                     if f.suffix.lower() == ".pdf"
                 ],
@@ -167,5 +188,24 @@ def downloads() -> str:
             if pdfs:
                 pdf_tree[class_dir.name] = pdfs
 
-    manifest = _load_manifest(DOWNLOADS_DIR) if DOWNLOADS_DIR.is_dir() else {}
     return render_template("downloads.html", pdf_tree=pdf_tree, manifest=manifest)
+
+
+def _enrich_pdf_entry(f: Any, mf: dict[str, Any]) -> dict[str, Any]:
+    """Build a rich dict for one downloaded PDF from filesystem + manifest data."""
+    size_bytes = int(cast(Any, f).stat().st_size)
+    source_url: str = mf.get("source_url", "")
+    label: str = (
+        mf.get("attachment_title")
+        or mf.get("assignment_title")
+        or cast(Any, f).stem
+    ) or cast(Any, f).name
+    return {
+        "name": cast(Any, f).name,
+        "url": f"/files/{cast(Any, f).parent.name}/{cast(Any, f).name}",
+        "size_str": _fmt_size(size_bytes),
+        "source_url": source_url,
+        "label": label,
+        "file_type": attachment_type(source_url) if source_url else "",
+        "assignment_url": mf.get("assignment_url", ""),
+    }
