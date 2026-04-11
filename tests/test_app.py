@@ -80,6 +80,9 @@ def _make_app(engine):
 
     a.jinja_env.globals["count_attachments"] = _count_attachments
     a.jinja_env.globals["pdf_url_for_assignment"] = _pdf_url_for_assignment
+
+    from src.routes.dashboard import _back_post_flag
+    a.jinja_env.globals["back_post_flag"] = _back_post_flag
     return a
 
 
@@ -673,6 +676,121 @@ class TestNoDueDateFilter:
             _make_assignment(s)
         resp = client.get("/")
         assert b"filter-count" in resp.data
+
+
+# ---------------------------------------------------------------------------
+# Ho 5.5 — Back-Posted Assignment Detection
+# ---------------------------------------------------------------------------
+
+
+class TestBackPostFlag:
+    def test_after(self):
+        from src.routes.dashboard import _back_post_flag
+        assert _back_post_flag("2026-05-02", "2026-05-01") == "after"
+
+    def test_same(self):
+        from src.routes.dashboard import _back_post_flag
+        assert _back_post_flag("2026-05-01", "2026-05-01") == "same"
+
+    def test_before(self):
+        from src.routes.dashboard import _back_post_flag
+        assert _back_post_flag("2026-04-28", "2026-05-01") == ""
+
+    def test_no_posted_date(self):
+        from src.routes.dashboard import _back_post_flag
+        assert _back_post_flag(None, "2026-05-01") == ""
+
+    def test_no_due_date(self):
+        from src.routes.dashboard import _back_post_flag
+        assert _back_post_flag("2026-05-01", None) == ""
+
+    def test_both_none(self):
+        from src.routes.dashboard import _back_post_flag
+        assert _back_post_flag(None, None) == ""
+
+    def test_stats_back_posted_count(self):
+        """_class_stats counts assignments with posted_date > due_date."""
+        from src.routes.dashboard import _class_stats
+        a1 = Assignment(
+            assignment_url="https://example.com/a/bp1",
+            class_name="Math", title="HW 1", status="Assigned",
+            posted_date="2026-05-02", due_date="2026-05-01",
+        )
+        a2 = Assignment(
+            assignment_url="https://example.com/a/bp2",
+            class_name="Math", title="HW 2", status="Assigned",
+            posted_date="2026-04-10", due_date="2026-05-01",
+        )
+        stats = _class_stats([a1, a2])
+        assert stats["back_posted"] == 1
+
+    def test_stats_back_posted_same_day_not_counted(self):
+        """Same-day posting is NOT included in back_posted count (only 'after')."""
+        from src.routes.dashboard import _class_stats
+        a = Assignment(
+            assignment_url="https://example.com/a/bp3",
+            class_name="Math", title="HW 3", status="Assigned",
+            posted_date="2026-05-01", due_date="2026-05-01",
+        )
+        stats = _class_stats([a])
+        assert stats["back_posted"] == 0
+
+    def test_dashboard_shows_backpost_filter_button(self, client, engine):
+        """Filter bar includes Back-posted button."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s)
+        resp = client.get("/")
+        assert b"Back-posted" in resp.data
+
+    def test_dashboard_after_badge_shown(self, client, engine):
+        """Assignment posted after deadline shows 'Posted after deadline' badge."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, posted_date="2026-05-02", due_date="2026-05-01")
+        resp = client.get("/")
+        assert b"Posted after deadline" in resp.data
+
+    def test_dashboard_same_day_badge_shown(self, client, engine):
+        """Assignment posted same day as due shows 'Posted same day as due' badge."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, posted_date="2026-05-01", due_date="2026-05-01")
+        resp = client.get("/")
+        assert b"Posted same day as due" in resp.data
+
+    def test_dashboard_normal_assignment_no_badge(self, client, engine):
+        """Assignment posted before due date shows no back-post badge."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, posted_date="2026-04-20", due_date="2026-05-01")
+        resp = client.get("/")
+        assert b"Posted after deadline" not in resp.data
+        assert b"Posted same day as due" not in resp.data
+
+    def test_dashboard_stat_card_shows_back_posted(self, client, engine):
+        """Stat card shows 'after deadline' count when back-posted assignments exist."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, posted_date="2026-05-02", due_date="2026-05-01")
+        resp = client.get("/")
+        assert b"after deadline" in resp.data
+
+    def test_row_data_backposted_attr(self, client, engine):
+        """Assignment row has data-backposted='after' for back-posted assignments."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, posted_date="2026-05-02", due_date="2026-05-01")
+        resp = client.get("/")
+        assert b'data-backposted="after"' in resp.data
+
+    def test_row_data_backposted_empty_for_normal(self, client, engine):
+        """Normal assignment row has data-backposted='' (empty)."""
+        with get_session(engine) as s:
+            _make_selected_class(s)
+            _make_assignment(s, posted_date="2026-04-20", due_date="2026-05-01")
+        resp = client.get("/")
+        assert b'data-backposted=""' in resp.data
 
 
 # ---------------------------------------------------------------------------

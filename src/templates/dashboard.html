@@ -57,6 +57,12 @@
           <span class="stat-card-val">{{ cls.stats.needs_attention }}</span>
           <span class="stat-card-lbl">to do</span>
         </div>
+        {% if cls.stats.back_posted > 0 %}
+        <div class="stat-card-item stat-missing">
+          <span class="stat-card-val">{{ cls.stats.back_posted }}</span>
+          <span class="stat-card-lbl">after deadline</span>
+        </div>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
@@ -67,6 +73,7 @@
     <button class="btn btn-filter" data-filter="no-due" onclick="setDashFilter('no-due')">No Due Date</button>
     <button class="btn btn-filter" data-filter="no-attach" onclick="setDashFilter('no-attach')">No Attachments</button>
     <button class="btn btn-filter" data-filter="never-graded" onclick="setDashFilter('never-graded')">Never Graded</button>
+    <button class="btn btn-filter" data-filter="back-posted" onclick="setDashFilter('back-posted')">Back-posted</button>
   </div>
 
   {% for cls in classes %}
@@ -105,12 +112,19 @@
           <tbody>
             {% for a in cls.assignments %}
             {% set att_count = count_attachments(a.attachment_links) %}
+            {% set bp_flag = back_post_flag(a.posted_date, a.due_date) %}
             <tr class="assignment-row"
                 data-id="{{ a.id }}"
                 data-no-due="{{ '1' if not a.due_date else '0' }}"
                 data-no-attach="{{ '1' if not a.attachment_links else '0' }}"
-                data-ungraded="{{ '1' if a.status != 'Graded' else '0' }}">
-              <td><a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a></td>
+                data-ungraded="{{ '1' if a.status != 'Graded' else '0' }}"
+                data-backposted="{{ bp_flag }}">
+              <td>
+                <a href="{{ a.assignment_url }}" target="_blank" rel="noopener">{{ a.title or '(untitled)' }}</a>
+                {% if bp_flag == 'after' %}<span class="backpost-badge backpost-after">⚠ Posted after deadline</span>
+                {% elif bp_flag == 'same' %}<span class="backpost-badge backpost-same">Posted same day as due</span>
+                {% endif %}
+              </td>
               <td class="nowrap">{{ a.posted_date or '—' }}</td>
               <td class="nowrap">{{ a.due_date or '—' }}</td>
               <td>{% include "partials/status_badge.html" %}</td>
@@ -162,7 +176,8 @@ function setDashFilter(f) {
     'all': function() { return true; },
     'no-due': function(tr) { return tr.dataset.noDue === '1'; },
     'no-attach': function(tr) { return tr.dataset.noAttach === '1'; },
-    'never-graded': function(tr) { return tr.dataset.ungraded === '1'; }
+    'never-graded': function(tr) { return tr.dataset.ungraded === '1'; },
+    'back-posted': function(tr) { return tr.dataset.backposted === 'after' || tr.dataset.backposted === 'same'; }
   };
   var test = predicates[f] || predicates['all'];
   document.querySelectorAll('details[data-class-idx]').forEach(function(det) {

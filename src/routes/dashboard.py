@@ -31,6 +31,22 @@ def _quality_label(pct_due: int, pct_attach: int, graded: int) -> str:
     return "Partial"
 
 
+def _back_post_flag(posted_date: Optional[str], due_date: Optional[str]) -> str:
+    """Return posting-timing flag: 'after' | 'same' | ''.
+
+    'after' — posted_date strictly later than due_date (student had no warning).
+    'same'  — posted_date equals due_date (posted the day it was due).
+    ''      — either date is absent, or posted before the due date.
+    """
+    if not posted_date or not due_date:
+        return ""
+    if posted_date > due_date:
+        return "after"
+    if posted_date == due_date:
+        return "same"
+    return ""
+
+
 def _class_stats(assignments: list[Assignment]) -> dict[str, int | str]:
     """Return summary counts for a list of assignments from a single class."""
     total = len(assignments)
@@ -50,6 +66,10 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int | str]:
     )
     no_due_count = sum(1 for a in assignments if not cast(Optional[str], a.due_date))
     never_graded = total - graded
+    back_posted = sum(
+        1 for a in assignments
+        if _back_post_flag(cast(Optional[str], a.posted_date), cast(Optional[str], a.due_date)) == "after"
+    )
     return {
         "total": total,
         "done": done,
@@ -61,6 +81,7 @@ def _class_stats(assignments: list[Assignment]) -> dict[str, int | str]:
         "attach_count": attach_count,
         "no_due_count": no_due_count,
         "never_graded": never_graded,
+        "back_posted": back_posted,
         "quality_label": _quality_label(pct_due, pct_attach, graded),
     }
 

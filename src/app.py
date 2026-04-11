@@ -63,6 +63,10 @@ def create_app() -> Flask:
 
     app.jinja_env.globals["pdf_url_for_assignment"] = _pdf_url_for_assignment
 
+    # Jinja global: back-post flag for templates
+    from src.routes.dashboard import _back_post_flag
+    app.jinja_env.globals["back_post_flag"] = _back_post_flag
+
     return app
 
 

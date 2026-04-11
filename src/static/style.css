@@ -360,6 +360,30 @@ a:hover { text-decoration: underline; }
 .quality-minimal    { color: #B91C1C; background: #FEE2E2; }
 .quality-empty      { color: #7F1D1D; background: #FECACA; }
 
+/* Back-posted assignment badges (inline in title cell) */
+.backpost-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.backpost-after {
+  color: #7F1D1D;
+  background: #FECACA;
+  border: 1px solid #FCA5A5;
+}
+
+.backpost-same {
+  color: #92400E;
+  background: #FEF3C7;
+  border: 1px solid #FCD34D;
+}
+
 .stat-card-name {
   font-size: 0.75rem;
   font-weight: 600;
