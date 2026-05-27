@@ -307,6 +307,44 @@ class TestCmdSelectClasses:
             cmd_select_classes(args)
         mock_select.assert_called_once_with(fake_config)
 
+    def test_session_expired_exits_1(self):
+        from src.classroom import SessionExpiredError
+
+        with (
+            patch("src.cli.load_config", return_value={"selected_classes": []}),
+            patch(
+                "src.classroom.do_select_classes",
+                side_effect=SessionExpiredError("Session expired, run login first"),
+            ),
+        ):
+            import argparse
+            args = argparse.Namespace()
+            from src.cli import cmd_select_classes
+            with pytest.raises(SystemExit) as exc:
+                cmd_select_classes(args)
+        assert exc.value.code == 1
+
+
+class TestCmdScrapeSessionExpired:
+    def test_session_expired_exits_1(self, tmp_path, monkeypatch):
+        """An expired session surfaces as a clean exit(1), not a traceback."""
+        from src.classroom import SessionExpiredError
+
+        monkeypatch.setattr(cli_module, "LOGS_DIR", tmp_path / "logs")
+        with (
+            patch("src.cli.load_config", return_value={"selected_classes": []}),
+            patch(
+                "src.classroom.do_scrape",
+                side_effect=SessionExpiredError("Session expired, run login first"),
+            ),
+        ):
+            import argparse
+            args = argparse.Namespace(dry_run=False, export_baserow=False)
+            from src.cli import cmd_scrape
+            with pytest.raises(SystemExit) as exc:
+                cmd_scrape(args)
+        assert exc.value.code == 1
+
 
 # ---------------------------------------------------------------------------
 # cmd_download_attachments

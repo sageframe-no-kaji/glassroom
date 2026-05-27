@@ -27,9 +27,13 @@ def cmd_login(args: argparse.Namespace) -> None:
 
 
 def cmd_select_classes(args: argparse.Namespace) -> None:
-    from src.classroom import do_select_classes
+    from src.classroom import SessionExpiredError, do_select_classes
 
-    do_select_classes(load_config())
+    try:
+        do_select_classes(load_config())
+    except SessionExpiredError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
 
 
 def cmd_dump_dom(args: argparse.Namespace) -> None:
@@ -122,10 +126,14 @@ def cmd_download_attachments(args: argparse.Namespace) -> None:
 
 
 def cmd_scrape(args: argparse.Namespace) -> None:
-    from src.classroom import do_scrape
+    from src.classroom import SessionExpiredError, do_scrape
 
     config = load_config()
-    assignments = do_scrape(config)
+    try:
+        assignments = do_scrape(config)
+    except SessionExpiredError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
 
     LOGS_DIR.mkdir(exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

@@ -21,6 +21,15 @@ _ITEM_TYPE_QUESTION = "4"
 _ITEM_TYPE_MATERIAL = "5"
 
 
+class SessionExpiredError(RuntimeError):
+    """Raised when the saved Google session has expired and re-login is needed.
+
+    A normal exception (not sys.exit) so background threads — e.g. the web
+    scrape worker — can catch it and surface a clear error instead of dying
+    silently when SystemExit slips past an ``except Exception`` handler.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Browser helpers
 # ---------------------------------------------------------------------------
@@ -95,11 +104,21 @@ def _expand_view_more(page: Page) -> None:
             break
 
 
+def _is_classroom_url(url: str) -> bool:
+    """True if the URL is on the Classroom host, not the sign-in redirect.
+
+    Checks the host with startswith rather than substring containment: the
+    sign-in redirect URL carries 'classroom.google.com' in its query string
+    (continue=, followup=), so an `in` check would mistake the login page for
+    a valid session. This is the single source of truth for that check.
+    """
+    return url.startswith("https://classroom.google.com")
+
+
 def _check_session(page: Page) -> None:
-    """Exit with a clear message if the session has expired."""
-    if "accounts.google.com" in page.url:
-        print("Session expired, run login first")
-        sys.exit(1)
+    """Raise SessionExpiredError if the session has expired."""
+    if not _is_classroom_url(page.url):
+        raise SessionExpiredError("Session expired, run login first")
 
 
 # ---------------------------------------------------------------------------
@@ -118,11 +137,11 @@ def do_login() -> None:
         # session is still valid and goto() already landed at classroom.google.com,
         # there is no further navigation to wait for — we'd block for 5 minutes.
         # Check the current URL first and skip the wait when already there.
-        if "classroom.google.com" not in page.url:
+        if not _is_classroom_url(page.url):
             # Networkidle is intentionally NOT used — Classroom is a SPA with
             # constant background polling and never reaches that state.
             page.wait_for_url(
-                lambda url: "classroom.google.com" in url,
+                lambda url: _is_classroom_url(url),
                 timeout=300_000,
             )
         # Brief pause so the persistent context flushes session cookies to disk
