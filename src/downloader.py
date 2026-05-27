@@ -196,7 +196,14 @@ def do_download_attachments(
     config: dict[str, Any],
     force: bool = False,
     on_progress: Callable[[int, int], None] | None = None,
+    class_filter: str | None = None,
 ) -> dict[str, Any]:
+    """Download Google Doc/Slides/Sheet attachments as PDFs.
+
+    Args:
+        class_filter: if given, only assignments whose class_name matches
+            exactly are downloaded. Used to scope a re-download to one class.
+    """
     from src.db import get_engine, get_session, init_db
     from src.models import Assignment
 
@@ -221,6 +228,13 @@ def do_download_attachments(
             for r in rows
         ]
     print(f"  {len(row_dicts)} assignments loaded", file=sys.stderr)
+
+    if class_filter:
+        row_dicts = [r for r in row_dicts if r["class_name"] == class_filter]
+        print(
+            f"  filtered to class '{class_filter}': {len(row_dicts)} assignments",
+            file=sys.stderr,
+        )
 
     DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
     prev_manifest = _load_manifest(DOWNLOADS_DIR)

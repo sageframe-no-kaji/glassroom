@@ -264,3 +264,42 @@ class TestAttachmentType:
 
     def test_empty_string_returns_link(self):
         assert attachment_type("") == "Link"
+
+
+# ---------------------------------------------------------------------------
+# do_download_attachments — class_filter (browser-free: filtering everything
+# out hits the "nothing to download" early return before Playwright launches)
+# ---------------------------------------------------------------------------
+
+
+class TestClassFilter:
+    def test_filter_excludes_non_matching_class(self, monkeypatch):
+        from sqlalchemy import create_engine
+
+        import src.db as db
+        import src.downloader as downloader
+        from src.db import get_session, init_db
+        from src.models import Assignment
+
+        eng = create_engine("sqlite:///:memory:")
+        init_db(eng)
+        with get_session(eng) as session:
+            session.add(
+                Assignment(
+                    assignment_url="https://classroom.google.com/c/1/a/1/details",
+                    class_name="Math",
+                    title="M1",
+                    attachment_links="https://docs.google.com/document/d/abc/edit",
+                    attachment_titles="Doc",
+                )
+            )
+        # Same engine instance on every call (a fresh in-memory engine would be
+        # a different database) so init_db() and the query see the seeded row.
+        monkeypatch.setattr(db, "get_engine", lambda *a, **k: eng)
+
+        # No row matches → row_dicts empties → total == 0 → early return,
+        # no browser. Proves the filter dropped the non-matching Math row.
+        result = downloader.do_download_attachments(
+            {}, class_filter="Social Studies/History: 004 - Lessage, P"
+        )
+        assert result == {"downloaded": 0, "skipped": 0, "classes": 0}
