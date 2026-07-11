@@ -1,0 +1,93 @@
+{
+  "keisaku": 1,
+  "works": [
+    {
+      "id": "glassroom",
+      "name": "Glassroom",
+      "hero": "The system's defense was opacity. I built the instrument that removed it.",
+      "importance": 6,
+      "featured": true,
+      "group": "production-systems",
+      "themes": [
+        "agency",
+        "knowledge"
+      ],
+      "sort_order_within_group": 30,
+      "tags": [
+        "software",
+        "production-system",
+        "research-instrument",
+        "educational-accountability",
+        "playwright"
+      ],
+      "media": [
+        "software"
+      ],
+      "status": "shipped",
+      "repo": "git@github-no-kaji:sageframe-no-kaji/glassroom.git",
+      "deployment": [
+        {
+          "label": "Live tool",
+          "url": "https://glassroom.sageframe.net"
+        },
+        {
+          "label": "GitHub repo",
+          "url": "https://github.com/sageframe-no-kaji/glassroom"
+        }
+      ],
+      "tech_stack": "Python (playwright, InquirerPy, requests, python-dotenv, ruff, sqlalchemy, flask, mypy, pytest, pytest-cov, types-requests)",
+      "created": "2026-04-10",
+      "last_updated": "2026-07-09",
+      "conceived": "2026-04-09",
+      "personal_stake": "Built for my daughter, whose rare neurological condition defies institutional understanding. The school system she was inside had a tool that produced data about her education while being structured to make that data illegible to a parent trying to advocate for a child the institution didn't know how to see.",
+      "short_description": "Open-source research instrument that scrapes Google Classroom at the student level and aggregates assignment data into a unified dashboard, CSV export, and PDF downloader — without requiring any Google API credentials. Playwright browser automation operates entirely within a student account, surfacing implementation variance between teachers that Google's own interface deliberately obscures: assignment counts, due-date usage, completion rates, structural patterns across all classes at once. Built originally for IEP advocacy. Harvard GSE research collaboration in pursuit for a multi-site empirical audit.",
+      "substantive_description": [
+        "Assignments scattered across teachers, no aggregate view, no way to compare implementation between classrooms, no way to demonstrate the variance that was visibly affecting her. The system's defense was opacity. I built the instrument that removed it.",
+        "The architectural argument generalizes. Glassroom is the inverse companion to Satori: where Satori uses architecture to protect downstream consumers from upstream AI generation, Glassroom uses architecture to surface downstream institutional data that an upstream system was structured to obscure. Same principle of layer separation, deployed for inverse purposes. The pair makes the structural point: governance lives in the architecture, not in the model.",
+        "Both tools were built for the same daughter — different needs, same person being failed by existing options, same generalizable architectural argument extracted from a specific case of love and necessity. The pair is the work."
+      ],
+      "images": {
+        "gallery": []
+      },
+      "state": {
+        "stage": "production",
+        "last": "Ho 5.10 (Color Palette + Visual Polish) closed; also fixed tests wiping real downloads and added `class_filter` to downloader; login wait bug fixed; scrape silent-failure on expired session fixed; v1.0.1 version label added to dashboard nav. Last meaningful commit: `fdc373d Stop tests wiping real downloads; add class_filter to downloader` (2026-05-27).",
+        "next": "unset — practitioner to point (K6 seeded retroactively). Recent ho sequence ran through 5.10; no open ho found in repo. Possible next: a 5.11 or phase-6 ho, or a post-v1.0 hardening/feature pass.",
+        "as_of": "2026-07-09"
+      },
+      "_keisaku": {
+        "generated_at": "2026-07-10T23:58:15",
+        "generator_version": "1",
+        "sources": {
+          "readme": "README.md",
+          "contract": "ho-process/kamae-6-glassroom-state-memory.md",
+          "manifest": "requirements.txt"
+        },
+        "derived_defaults": {
+          "id": "glassroom",
+          "name": "glassroom",
+          "media": [
+            "software"
+          ],
+          "status": "shipped",
+          "created": "2026-04-07",
+          "tags": [
+            "python",
+            "playwright",
+            "inquirerpy",
+            "requests",
+            "python-dotenv",
+            "ruff",
+            "sqlalchemy",
+            "flask",
+            "mypy",
+            "pytest",
+            "pytest-cov",
+            "types-requests"
+          ]
+        },
+        "contract_issues": []
+      }
+    }
+  ]
+}
