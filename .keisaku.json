@@ -37,7 +37,7 @@
       ],
       "tech_stack": "Python (playwright, InquirerPy, requests, python-dotenv, ruff, sqlalchemy, flask, mypy, pytest, pytest-cov, types-requests)",
       "created": "2026-04-10",
-      "last_updated": "2026-07-10",
+      "last_updated": "2026-07-09",
       "conceived": "2026-04-09",
       "personal_stake": "Built for my daughter, whose rare neurological condition defies institutional understanding. The school system she was inside had a tool that produced data about her education while being structured to make that data illegible to a parent trying to advocate for a child the institution didn't know how to see.",
       "short_description": "Open-source research instrument that scrapes Google Classroom at the student level and aggregates assignment data into a unified dashboard, CSV export, and PDF downloader — without requiring any Google API credentials. Playwright browser automation operates entirely within a student account, surfacing implementation variance between teachers that Google's own interface deliberately obscures: assignment counts, due-date usage, completion rates, structural patterns across all classes at once. Built originally for IEP advocacy. Harvard GSE research collaboration in pursuit for a multi-site empirical audit.",
@@ -56,7 +56,7 @@
         "as_of": "2026-07-09"
       },
       "_keisaku": {
-        "generated_at": "2026-07-11T13:34:16",
+        "generated_at": "2026-07-12T10:36:24",
         "generator_version": "1",
         "sources": {
           "readme": "README.md",
