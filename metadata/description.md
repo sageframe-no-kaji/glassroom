@@ -1,0 +1,7 @@
+# Glassroom — description
+
+An open-source research instrument that scrapes Google Classroom at the student level and aggregates the assignment data an institution's own interface keeps illegible.
+
+Assignments scattered across teachers, no aggregate view, no way to compare implementation between classrooms, no way to demonstrate the variance that was visibly affecting a child the school did not know how to see — the system's defense was opacity, and Glassroom is the instrument built to remove it. Playwright browser automation operates entirely within a student account, requires no Google API credentials, and surfaces the implementation variance the interface obscures: assignment counts, due-date usage, completion rates, and structural patterns across every class at once, exported to a dashboard, CSV, and downloadable PDFs. Built originally for IEP advocacy, it is now in pursuit of a Harvard GSE research collaboration for a multi-site empirical audit. The architectural argument generalizes: Glassroom is the inverse companion to Satori — where Satori uses layer separation to protect downstream consumers from upstream AI generation, Glassroom uses it to surface downstream institutional data an upstream system was structured to obscure. Same principle, inverse purpose; both tools were built for the same daughter, and the pair makes the structural point that governance lives in the architecture, not in the model.
+
+Playwright browser automation, packaged in Docker; open-source.
