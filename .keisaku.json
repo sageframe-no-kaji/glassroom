@@ -48,6 +48,8 @@
       "images": {
         "gallery": []
       },
+      "availability": "shipped",
+      "usage": "others",
       "state": {
         "stage": "production",
         "last": "Ho 5.10 (Color Palette + Visual Polish) closed; also fixed tests wiping real downloads and added `class_filter` to downloader; login wait bug fixed; scrape silent-failure on expired session fixed; v1.0.1 version label added to dashboard nav. Last meaningful commit: `fdc373d Stop tests wiping real downloads; add class_filter to downloader` (2026-05-27).",
